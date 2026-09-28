@@ -582,28 +582,34 @@ function giftItem(g){
   }
   return h+'</div>'}
 function giftCard(wd){
-  const act=gifts.filter(g=>g.status!=='entregue').sort((a,b)=>a.created<b.created?-1:1);
-  let h='<div class="nrow"><div class="label">Presentes e docinhos</div>'+act.map(giftItem).join('');
-  if(!act.length)h+='<div class="sub2">Nada em andamento.</div>';
+  const due=g=>wd===3||g.status==='escolhido'||g.arrival===TODAY||g.buy===TODAY||g.deliver===TODAY||(g.deliver&&g.deliver<TODAY)||(g.tipo!=='doce'&&g.status==='comprado'&&g.arrival&&g.arrival<TODAY&&[5,6,0].includes(wd));
+  const act=gifts.filter(g=>g.status!=='entregue'&&due(g)).sort((a,b)=>a.created<b.created?-1:1);
   const lastWed=wd===3?TODAY:[4,5,6,0].includes(wd)?key(addD(parse(TODAY),-((wd+7-3)%7))):null;
   const late=lastWed&&wd!==3&&!gifts.some(g=>g.created>=lastWed);const canSort=wd===3||late;
   const nextWed=key(addD(parse(TODAY),((3-wd+7)%7)||7));
+  if(!act.length&&!canSort)return '';
+  let h='<div class="nrow"><div class="label">Presentes e docinhos</div>'+act.map(giftItem).join('');
+  if(!act.length)h+='<div class="sub2">Nada em andamento.</div>';
   h+='<div class="sub2">'+(wd===3?'<b style="color:var(--warn)">Hoje é dia de sortear.</b>':late?'<b style="color:var(--bad)">Sorteio de quarta atrasado.</b>':'Próximo sorteio: '+fmt(nextWed)+'.')+' Presente: você põe a chegada e a entrega cai no fim de semana. Doce: vai pra sexta da próxima semana sem presente chegando.</div>';
   if(canSort)h+='<div class="btns" style="align-items:center">'+budIn('x')+'<select id="gtipo" aria-label="Tipo" style="width:auto"><option value="">Qualquer</option><option value="presente">Presente</option><option value="doce">Doce</option></select><button class="btn small" data-gnew>Sortear</button></div>';
   return h+'</div>'}
 function nextSat(d){return key(addD(d,((6-d.getDay()+7)%7)||7))}
 function namCard(d){
-  const wd=d.getDay();let h='<div class="card"><div class="hrow"><h3>Namorado</h3><span class="pd namorado"></span></div>';
+  const wd=d.getDay();let h='';
   h+=giftCard(wd);
   const np=progBetween(TODAY,key(addD(d,30)));
-  h+='<div class="nrow"><div class="label">Próximo programa a dois</div>'+(np?evOn(np).filter(isProg).map(e=>evBtn(e,np)+(e.notes?'<div class="q" style="font-style:normal;white-space:pre-wrap">'+esc(e.notes)+'</div>':'')).join('')+'<div class="sub2">'+(np===TODAY?'hoje':DNF[parse(np).getDay()]+', '+parse(np).getDate()+' '+MN[parse(np).getMonth()])+'</div>':'<div class="sub2">Nada marcado nos próximos 30 dias.</div>');
+  const progDay=[4,5,6].includes(wd)||np===TODAY||!!rolled.prog;
+  if(progDay){h+='<div class="nrow"><div class="label">Próximo programa a dois</div>'+(np?evOn(np).filter(isProg).map(e=>evBtn(e,np)+(e.notes?'<div class="q" style="font-style:normal;white-space:pre-wrap">'+esc(e.notes)+'</div>':'')).join('')+'<div class="sub2">'+(np===TODAY?'hoje':DNF[parse(np).getDay()]+', '+parse(np).getDate()+' '+MN[parse(np).getMonth()])+'</div>':'<div class="sub2">Nada marcado nos próximos 30 dias.</div>');
   if(rolled.prog)h+='<div class="q">'+esc(rolled.prog)+'</div>';
-  h+='<div class="btns"><button class="btn small ghost" data-pwrite>Escrever programa</button><button class="btn small ghost" data-proll>'+(rolled.prog?'Outra ideia':'Sortear ideia')+'</button>'+(rolled.prog?'<button class="btn small" data-pmark>Marcar no calendário</button>':'')+'</div></div>';
+  h+='<div class="btns"><button class="btn small ghost" data-pwrite>Escrever programa</button><button class="btn small ghost" data-proll>'+(rolled.prog?'Outra ideia':'Sortear ideia')+'</button>'+(rolled.prog?'<button class="btn small" data-pmark>Marcar no calendário</button>':'')+'</div></div>'}
   const ld=lastDR(),since=ld?Math.round((d-parse(ld))/864e5):null;
-  h+='<div class="nrow"><div class="label">DR da quinzena</div><div class="sub2">'+(ld?(since===0?'Feita hoje':'Última há '+since+' dias'):'Nenhuma ainda')+((since==null||since>=14)?' · <b style="color:var(--warn)">tá na hora</b>':'')+'</div>';
+  const drEv=evOn(TODAY).some(e=>e.pillar==='namorado'&&/^DR\b/i.test(e.title||''));
+  const drDay=drEv||since===0||!!rolled.dr||((since==null||since>=14)&&[5,6].includes(wd));
+  if(drDay){h+='<div class="nrow"><div class="label">DR da quinzena</div><div class="sub2">'+(ld?(since===0?'Feita hoje':'Última há '+since+' dias'):'Nenhuma ainda')+((since==null||since>=14)?' · <b style="color:var(--warn)">tá na hora</b>':'')+'</div>';
   if(rolled.dr)h+='<div class="q">'+esc(rolled.dr)+'</div>';
-  h+='<div class="btns"><button class="btn small ghost" data-drroll>'+(rolled.dr?'Outra pergunta':'Sortear pergunta')+'</button><button class="btn small" data-drdone>Conversamos <span class="xp">+25</span></button></div></div>';
-  return h+'</div>'}
+  h+='<div class="btns"><button class="btn small ghost" data-drroll>'+(rolled.dr?'Outra pergunta':'Sortear pergunta')+'</button><button class="btn small" data-drdone>Conversamos <span class="xp">+25</span></button></div></div>'}
+  if(!h)return '';
+  return '<div class="card"><div class="hrow"><h3>Namorado</h3><span class="pd namorado"></span></div>'+h.replace('<div class="nrow">','<div class="nrow" style="border-top:0;padding-top:0">')+'</div>'}
 
 /* ---------- CALENDÁRIO ---------- */
 let calMode='month', calCur=parse(TODAY), calSel=TODAY;
