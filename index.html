@@ -661,6 +661,7 @@ function vSuc(st){
   const B=badges(st);
   h+='<div class="card"><div class="hrow"><h3>Conquistas</h3><span class="sub2 num">'+B.filter(b=>b[2]).length+'/'+B.length+'</span></div><div class="badges">'+B.map(b=>'<div class="bd'+(b[2]?' on':'')+'"><b>'+b[0]+'</b><span>'+b[1]+'</span></div>').join('')+'</div></div>';
   {const a=bkpAge();h+='<div class="card"><h3>Backup</h3><div class="sub2">'+(a==null?'Nenhum backup ainda.':a===0?'Último backup: hoje.':'Último backup há '+a+' dias.')+' Guarda o arquivo no Drive ou no iCloud. Com ele, você recupera tudo mesmo se o banco sumir.</div><div class="btns"><button class="btn small" data-bkp>Baixar backup</button><label class="btn small ghost" for="imp" style="cursor:pointer">Importar backup</label><input type="file" id="imp" accept="application/json,.json" hidden></div><div class="btns"><button class="btn small ghost" data-logout>Sair da conta</button></div></div>'}
+  h+='<div class="card"><h3>Conexão com o Claude</h3><div class="sub2">'+(window.__ccode?'Com isso o Claude consegue colocar compromissos na sua agenda. Copia o código e manda pra ele no chat, só uma vez.':'Gerando a chave de conexão...')+'</div>'+(window.__ccode?'<div class="btns"><button class="btn small" data-ccopy>Copiar código</button></div><textarea id="ccode" rows="3" readonly hidden></textarea>':'')+'</div>';
   h+='<div class="card"><h3>Regras do jogo</h3><ul class="rules"><li>Nunca falhar o mesmo hábito dois dias seguidos. Falhou ontem, hoje é inegociável.</li><li>Meta da semana: 80%. Cem por cento não é a meta.</li><li>Sexta: noite a dois leve. Sábado: manhã sua, programa à tarde ou à noite. Domingo: mercado, tempo separado, cama às 22:30.</li><li>Menos horas juntos, mais intenção.</li><li>Nada de hábito novo antes do atual ficar automático.</li><li>O homem e o idiota jogam no mesmo time.</li></ul></div>';
   $('#v-suc').innerHTML=h;
 }
@@ -738,6 +739,7 @@ document.addEventListener('click',e=>{
   else if(ds.tdel){if(t.dataset.arm==='1'){delTrip(ds.tdel);render()}else{t.dataset.arm='1';t.textContent='Confirmar?'}}
   else if(ds.lrm){const [n,i]=ds.lrm.split('|');const it=n==='presentes'?[...Lg()]:[...L(n)];it.splice(+i,1);lists[n]={items:it};saveList(n);render()}
   else if(ds.bkp!==undefined){doBackup()}
+  else if(ds.ccopy!==undefined){const c=window.__ccode||'';(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>toast('Código copiado. Cola no chat do Claude.')).catch(()=>{const t=$('#ccode');t.hidden=false;t.value=c;t.select();toast('Seleciona e copia o texto')})}
   else if(ds.logout!==undefined){if(window.firebase&&firebase.apps.length)firebase.auth().signOut()}
   else if(ds.sp){sucP=ds.sp;render()}
   else if(ds.so){sucOff=Math.min(0,sucOff+(+ds.so));render()}
@@ -782,7 +784,35 @@ render();
   const soft=()=>{const a=document.activeElement;if(a&&a.matches&&a.matches('input[type=text],textarea')&&a.value)return;if(!$('#sheet').hidden)return;render()};
   const clone=v=>JSON.parse(JSON.stringify(v));
   const st=m=>note(m.fromCache?'offline · sincroniza quando voltar a conexão':'sincronizado na nuvem');
+  const b64=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s)};
+  const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+  let privKey=null,lastPull=0;
+  async function ensureKey(){
+    const ref=fs.doc('meta/claudekey');let d=null;try{d=(await ref.get()).data()}catch(e){}
+    if(d&&d.priv&&d.pub){privKey=await crypto.subtle.importKey('jwk',d.priv,{name:'RSA-OAEP',hash:'SHA-256'},false,['decrypt']);window.__ccode=d.pub;return}
+    const kp=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt']);
+    const priv=await crypto.subtle.exportKey('jwk',kp.privateKey);const pub=b64(await crypto.subtle.exportKey('spki',kp.publicKey));
+    await ref.set({priv,pub,created:new Date().toISOString()});privKey=kp.privateKey;window.__ccode=pub}
+  function applyMsg(m){
+    if((m.op==='add'||m.op==='set')&&m.ev&&m.ev.id){const e=m.ev;const i=agenda.findIndex(a=>a.id===e.id);if(i>=0)agenda[i]=e;else agenda.push(e);saveEv(e);return 1}
+    if(m.op==='del'&&m.id){if(agenda.some(a=>a.id===m.id))delEv(m.id);return 1}
+    return 0}
+  async function pullInbox(){
+    if(!privKey||Date.now()-lastPull<30000)return;lastPull=Date.now();
+    let r;try{r=await fetch('https://api.github.com/repos/PosRoot766/manual-de-ser-humano/contents/inbox.json?ts='+Date.now(),{headers:{Accept:'application/vnd.github.raw+json'},cache:'no-store'})}catch(e){return}
+    if(!r.ok)return;let box;try{box=await r.json()}catch(e){return}
+    const doneRef=fs.doc('meta/inbox');let done=[];try{done=((await doneRef.get()).data()||{}).done||[]}catch(e){}
+    const seen=new Set(done);let n=0;
+    for(const it of (box.items||[])){if(!it.id||seen.has(it.id))continue;
+      try{const raw=await crypto.subtle.decrypt({name:'RSA-OAEP'},privKey,unb64(it.k));
+        const ak=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['decrypt']);
+        const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(it.iv)},ak,unb64(it.c));
+        n+=applyMsg(JSON.parse(new TextDecoder().decode(pt)));seen.add(it.id)}catch(e){console.warn('inbox',it.id,e)}}
+    if(seen.size!==done.length){try{await doneRef.set({done:[...seen].slice(-800)})}catch(e){}}
+    if(n){toast(n+(n>1?' atualizações do Claude na agenda':' atualização do Claude na agenda'));render()}}
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullInbox()});
   function start(){
+    ensureKey().then(()=>{soft();pullInbox()}).catch(e=>console.warn('chave',e));
     db=fs;
     const col=(name,fn)=>unsubs.push(fs.collection(name).onSnapshot({includeMetadataChanges:true},s=>{fn(s);st(s.metadata);soft()},e=>{if(e.code==='permission-denied'){gerr('Essa conta não tem acesso aos dados. Entre com a sua conta.');auth.signOut()}else note('erro ao sincronizar: '+(e.code||e.message))}));
     col('days',s=>{s.docs.forEach(d=>{days[d.id]=clone(d.data())});lset('days',days)});

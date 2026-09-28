@@ -20,3 +20,9 @@ Os dados pessoais nunca ficam neste repositório.
 ## Atualizar
 
 Ao mudar `index.html`, suba o número em `CACHE` no `sw.js` pra forçar a atualização nos aparelhos.
+
+## Caixa de entrada (Claude → agenda)
+
+O Claude adiciona compromissos com `tools/inbox.py`, que grava mensagens criptografadas em `inbox.json`.
+O app descriptografa com a chave privada guardada no Firebase (`meta/claudekey`) e aplica na agenda ao abrir.
+A chave pública fica em `tools/claude_pubkey.txt` (Sucesso → Conexão com o Claude → Copiar código).
