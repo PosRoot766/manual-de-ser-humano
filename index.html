@@ -823,10 +823,14 @@ render();
     if(seen.size!==done.length){try{await doneRef.set({done:[...seen].slice(-800)})}catch(e){}}
     if(n){toast(n+(n>1?' atualizações do Claude na agenda':' atualização do Claude na agenda'));render()}}
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullInbox()});
+  let deniedShown=false;
+  async function denied(){if(deniedShown)return;deniedShown=true;const u=auth.currentUser;let v='?';try{const t=await u.getIdTokenResult();v=String(t.claims.email_verified)}catch(e){}
+    $('#gate').hidden=false;gerr('O banco recusou o acesso. Conta: '+(u&&u.email)+' · verificado: '+v+' · id: '+(u&&u.uid)+'. Manda um print disso pro Claude.');
+    const b=document.createElement('button');b.className='btn ghost';b.textContent='Sair e tentar outra conta';b.onclick=()=>{deniedShown=false;auth.signOut()};$('#gerr').after(b)}
   function start(){
     ensureKey().then(()=>{soft();pullInbox()}).catch(e=>console.warn('chave',e));
     db=fs;
-    const col=(name,fn)=>unsubs.push(fs.collection(name).onSnapshot({includeMetadataChanges:true},s=>{fn(s);st(s.metadata);soft()},e=>{if(e.code==='permission-denied'){gerr('Essa conta não tem acesso aos dados. Entre com a sua conta.');auth.signOut()}else note('erro ao sincronizar: '+(e.code||e.message))}));
+    const col=(name,fn)=>unsubs.push(fs.collection(name).onSnapshot({includeMetadataChanges:true},s=>{fn(s);st(s.metadata);soft()},e=>{if(e.code==='permission-denied'){denied()}else note('erro ao sincronizar: '+(e.code||e.message))}));
     col('days',s=>{s.docs.forEach(d=>{days[d.id]=clone(d.data())});lset('days',days)});
     col('weeks',s=>{s.docs.forEach(d=>{weeks[d.id]=clone(d.data())});lset('weeks',weeks)});
     col('lists',s=>{s.docs.forEach(d=>{lists[d.id]=clone(d.data())});lset('lists',lists)});
