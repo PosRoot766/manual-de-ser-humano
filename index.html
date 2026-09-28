@@ -229,6 +229,14 @@ img{max-width:100%}
 .gcard h1{font-size:30px;font-weight:800;letter-spacing:-.02em}
 .gcard .btn{padding:12px 16px;font-size:16px}
 .bk{background:var(--warn-soft)}
+.evi.ok .tt,.evi.lost .tt{text-decoration:line-through;color:var(--muted)}
+.evi.moved{opacity:.6}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.mc .ev.dn{text-decoration:line-through;opacity:.55}
+.linkb{background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.linkb.dn{text-decoration:line-through;color:var(--muted)}
+.stbox{background:var(--surface2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.stbox input[type=date]{background:var(--surface)}
 .gform{display:flex;flex-direction:column;gap:10px}
 input[type=email],input[type=password]{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;font:inherit;color:inherit}
 </style>
@@ -259,6 +267,7 @@ input[type=email],input[type=password]{background:var(--surface);border:1px soli
 <div class="sheet" id="sheet" hidden>
   <form id="evform">
     <h3 id="evh">Novo compromisso</h3>
+    <div class="stbox" id="evst" hidden><div class="label" id="evstl"></div><div class="btns"><button type="button" class="btn small" data-est="feito">Feito</button><button type="button" class="btn small ghost" data-est="perdido">Perdido pra sempre</button><button type="button" class="btn small ghost" data-est="clear" id="estclear">Desfazer</button></div><div class="inline"><input type="date" id="evre" aria-label="Nova data"><button type="button" class="btn small ghost" data-est="move">Reagendar</button></div></div>
     <input type="hidden" id="evid">
     <input type="text" id="evt" placeholder="O quê?" required autocomplete="off" aria-label="Título">
     <input type="date" id="evd" class="half" required aria-label="Data">
@@ -501,8 +510,10 @@ function vHoje(){
   // avisos do calendário
   const av=[];for(let i=0;i<4;i++){const k=key(addD(d,i));for(const e of evOn(k))av.push({i,k,e})}
   for(const t of trips){const n=tripNext(t);if(n&&n.due<=key(addD(d,7))){const late=n.due<TODAY;av.unshift({i:late?0:9,k:n.due,e:{title:'Viagem '+t.dest+': '+n.l.toLowerCase()+(late?' (atrasado)':' até '+n.due.split('-').reverse().slice(0,2).join('/')),time:''},trip:1})}}
+  {const late=agenda.filter(e=>(!e.recur||e.recur==='none')&&e.date<TODAY&&e.date>=key(addD(d,-30))&&!evSt(e,e.date)).sort((a,b)=>a.date<b.date?-1:1);
+   if(late.length)h+='<div class="card bk"><h3>Ficou pra trás</h3><div class="sub2">Toca pra marcar feito, reagendar ou dar como perdido.</div>'+late.map(e=>evBtn(e,e.date)+'<div class="sub2">'+fmt(e.date)+'</div>').join('')+'</div>'}
   h+='<div class="card"><div class="hrow"><h3>Próximos compromissos</h3><button class="btn small ghost" data-newev="'+TODAY+'">+ Compromisso</button></div>';
-  if(av.length) h+='<ul class="avisos">'+av.slice(0,6).map(a=>'<li class="'+(a.i===0?'hj':'')+'"><span class="when">'+(a.trip?'Viagem':a.i===0?'Hoje':a.i===1?'Amanhã':DNF[parse(a.k).getDay()])+(a.e.time?' '+a.e.time:'')+'</span><span>'+esc(a.e.title)+'</span></li>').join('')+'</ul>';
+  if(av.length) h+='<ul class="avisos">'+av.slice(0,6).map(a=>'<li class="'+(a.i===0?'hj':'')+'"><span class="when">'+(a.trip?'Viagem':a.i===0?'Hoje':a.i===1?'Amanhã':DNF[parse(a.k).getDay()])+(a.e.time?' '+a.e.time:'')+'</span>'+(a.e.id?'<button class="linkb'+(evSt(a.e,a.k)?' dn':'')+'" data-ev="'+a.e.id+'" data-k="'+a.k+'">'+esc(a.e.title)+'</button> '+stTag(a.e,a.k):'<span>'+esc(a.e.title)+'</span>')+'</li>').join('')+'</ul>';
   else h+='<div class="sub2">Nada nos próximos 4 dias.</div>';
   h+='</div>';
 
@@ -590,7 +601,9 @@ function namCard(d){
 
 /* ---------- CALENDÁRIO ---------- */
 let calMode='month', calCur=parse(TODAY), calSel=TODAY;
-function evBtn(e,k){return '<button class="evi" data-ev="'+(e.id||'')+'" data-k="'+k+'"><span class="pd '+(e.pillar||'organizado')+'"></span><span class="tm">'+(e.time||'dia')+'</span><span class="tt">'+esc(e.title)+'</span></button>'}
+function evSt(e,k){return ((e.st||{})[k])||''}
+function stTag(e,k){const st=evSt(e,k);if(st==='feito')return '<span class="tag ok">feito</span>';if(st==='perdido')return '<span class="tag must">perdido</span>';if(st.startsWith('reagendado'))return '<span class="tag p">→ '+fmt(st.split(':')[1])+'</span>';if(e.id&&k<TODAY&&(!e.recur||e.recur==='none'))return '<span class="tag warn">pendente</span>';return ''}
+function evBtn(e,k){const st=evSt(e,k);const cls=st==='feito'?' ok':st==='perdido'?' lost':st.startsWith('reagendado')?' moved':'';return '<button class="evi'+cls+'" data-ev="'+(e.id||'')+'" data-k="'+k+'"><span class="pd '+(e.pillar||'organizado')+'"></span><span class="tm">'+(e.time||'dia')+'</span><span class="tt">'+esc(e.title)+'</span>'+stTag(e,k)+'</button>'}
 function vCal(){
   let h='<div class="caltop"><button class="iconbtn" data-cnav="-1" aria-label="Anterior">‹</button><h2>';
   let ks;
@@ -604,7 +617,7 @@ function vCal(){
     for(let i=0;i<42;i++){const dt=addD(start,i);const k=key(dt);if(i>=35&&dt.getMonth()!==calCur.getMonth())break;
       const evs=evOn(k);
       h+='<button class="mc'+(dt.getMonth()!==calCur.getMonth()?' out':'')+(k===TODAY?' tod':'')+(k===calSel?' sel':'')+'" data-sel="'+k+'"><span class="d">'+dt.getDate()+'</span>'+
-        evs.slice(0,2).map(e=>'<span class="ev '+(e.pillar||'organizado')+'">'+esc(e.title)+'</span>').join('')+(evs.length>2?'<span class="more">+'+(evs.length-2)+'</span>':'')+'</button>'}
+        evs.slice(0,2).map(e=>'<span class="ev '+(e.pillar||'organizado')+(evSt(e,k)?' dn':'')+'">'+esc(e.title)+'</span>').join('')+(evs.length>2?'<span class="more">+'+(evs.length-2)+'</span>':'')+'</button>'}
     h+='</div>';
     const sd=parse(calSel),evs=evOn(calSel);
     h+='<div class="wkd'+(calSel===TODAY?' tod':'')+'"><div class="hd"><b>'+DNF[sd.getDay()]+', '+sd.getDate()+' '+MN[sd.getMonth()]+'</b><button class="btn small ghost" data-newev="'+calSel+'">+ Adicionar</button></div>'+
@@ -615,7 +628,9 @@ function vCal(){
   }
   $('#v-cal').innerHTML=h;
 }
-function openSheet(ev,dateK,pre){pre=pre||{};
+let sheetK=null;
+function openSheet(ev,dateK,pre){pre=pre||{};sheetK=ev?(dateK||ev.date):null;
+  $('#evst').hidden=!ev;if(ev){const st=evSt(ev,sheetK);$('#evstl').textContent='Em '+fmt(sheetK)+(st?' · '+(st.startsWith('reagendado')?'reagendado':st):'');$('#estclear').hidden=!st;$('#evre').value=sheetK}
   $('#evh').textContent=ev?'Editar compromisso':'Novo compromisso';
   $('#evid').value=ev?ev.id:'';$('#evt').value=ev?ev.title:'';$('#evd').value=ev?ev.date:(dateK||TODAY);
   $('#evtm').value=ev?(ev.time||''):'';$('#evp').value=ev?(ev.pillar||'organizado'):(pre.pillar||'organizado');if(!ev&&pre.title)$('#evt').value=pre.title;$('#evk').checked=ev?ev.kind==='programa':pre.kind==='programa';$('#evn').value=ev?(ev.notes||''):(pre.notes||'');$('#evr').value=ev?(ev.recur||'none'):'none';
@@ -716,7 +731,16 @@ document.addEventListener('click',e=>{
   else if(ds.sh){const w=ds.wk;const W=weeks[w]||(weeks[w]={shop:{}});W.shop=W.shop||{};W.shop[ds.sh]=!W.shop[ds.sh];if(!W.shop[ds.sh])delete W.shop[ds.sh];saveWeek(w);render()}
   else if(ds.roll){const w=ds.roll;const W=weeks[w]||(weeks[w]={shop:{}});const cur=sandIdx(w);let n=cur;while(n===cur)n=Math.floor(Math.random()*MENU.length);W.sand=n;W.shop={};saveWeek(w);render();const s=$('#sand');if(s){s.classList.add('spin')}}
   else if(ds.newev!==undefined){openSheet(null,ds.newev)}
-  else if(ds.ev){const ev=agenda.find(x=>x.id===ds.ev);if(ev)openSheet(ev)}
+  else if(ds.ev){const ev=agenda.find(x=>x.id===ds.ev);if(ev)openSheet(ev,ds.k)}
+  else if(ds.est){const ev=agenda.find(x=>x.id===$('#evid').value);const k=sheetK;if(!ev||!k)return;ev.st=ev.st||{};const dd=day(TODAY);dd.bonus=dd.bonus||{};const bk='ev_'+ev.id+'_'+k;
+    if(ds.est==='feito'){const b=dayXP(TODAY);ev.st[k]='feito';dd.bonus[bk]=10;saveDay(TODAY);saveEv(ev);gain(b)}
+    else if(ds.est==='perdido'){ev.st[k]='perdido';saveEv(ev);toast('Marcado como perdido')}
+    else if(ds.est==='clear'){delete ev.st[k];if(dd.bonus[bk]){delete dd.bonus[bk];saveDay(TODAY)}saveEv(ev);toast('Desfeito')}
+    else if(ds.est==='move'){const nd=$('#evre').value;if(!nd||nd===k){toast('Escolhe a nova data');return}
+      if(!ev.recur||ev.recur==='none'){ev.date=nd;delete ev.st[k];saveEv(ev)}
+      else{ev.st[k]='reagendado:'+nd;saveEv(ev);const c={id:'e'+Date.now().toString(36),title:ev.title,date:nd,time:ev.time||'',pillar:ev.pillar,recur:'none',kind:ev.kind||'',notes:ev.notes||'',from:ev.id};agenda.push(c);saveEv(c)}
+      toast('Reagendado pra '+fmt(nd))}
+    $('#sheet').hidden=true;render()}
   else if(ds.sel){calSel=ds.sel;render()}
   else if(ds.cm){calMode=ds.cm;render()}
   else if(ds.cnav){const n=+ds.cnav;if(calMode==='month'){calCur=new Date(calCur.getFullYear(),calCur.getMonth()+n,1)}else calCur=addD(calCur,7*n);render()}
@@ -760,7 +784,7 @@ document.addEventListener('submit',e=>{e.preventDefault();
   if(e.target.id==='evform'){const title=$('#evt').value.trim(),date=$('#evd').value;if(!title||!date)return;
     const id=$('#evid').value||('e'+Date.now().toString(36));
     const ev={id,title,date,time:$('#evtm').value||'',pillar:$('#evp').value,recur:$('#evr').value,kind:$('#evk').checked?'programa':'',notes:$('#evn').value.trim()};if(ev.kind==='programa'&&!$('#evid').value){rolled.prog=null}
-    const i=agenda.findIndex(a=>a.id===id);if(i>=0)agenda[i]=ev;else agenda.push(ev);saveEv(ev);
+    const i=agenda.findIndex(a=>a.id===id);if(i>=0){if(agenda[i].st)ev.st=agenda[i].st;if(agenda[i].from)ev.from=agenda[i].from;agenda[i]=ev}else agenda.push(ev);saveEv(ev);
     $('#sheet').hidden=true;calSel=date;calCur=parse(date);toast('Salvo na agenda');render()}
 });
 $('#evcancel').onclick=()=>{$('#sheet').hidden=true};
@@ -806,7 +830,7 @@ render();
     const priv=await crypto.subtle.exportKey('jwk',kp.privateKey);const pub=b64(await crypto.subtle.exportKey('spki',kp.publicKey));
     await ref.set({priv,pub,created:new Date().toISOString()});privKey=kp.privateKey;window.__ccode=pub}
   function applyMsg(m){
-    if((m.op==='add'||m.op==='set')&&m.ev&&m.ev.id){const e=m.ev;const i=agenda.findIndex(a=>a.id===e.id);if(i>=0)agenda[i]=e;else agenda.push(e);saveEv(e);return 1}
+    if((m.op==='add'||m.op==='set')&&m.ev&&m.ev.id){const e=m.ev;const i=agenda.findIndex(a=>a.id===e.id);if(i>=0){if(agenda[i].st&&!e.st)e.st=agenda[i].st;agenda[i]=e}else agenda.push(e);saveEv(e);return 1}
     if(m.op==='del'&&m.id){if(agenda.some(a=>a.id===m.id))delEv(m.id);return 1}
     return 0}
   async function pullInbox(){
