@@ -325,6 +325,7 @@ const H=[
  {id:'banho_pm',g:'noite',t:'Banho',d:WD},
  {id:'dentes_pm',g:'noite',t:'Escovar os dentes',d:ALL},
  {id:'montar',g:'noite',t:'Montar sanduíches de amanhã',d:[0,1,2,3,4]},
+ {id:'along',g:'noite',t:'Alongamento 15 min',d:ALL,guide:'along'},
  {id:'noite2',g:'noite',t:'Noite a dois leve: jantar, filme, conversa',d:[5],p:'namorado'},
  {id:'semtela',g:'noite',t:'30 min sem tela',d:ALL},
  {id:'cama',g:'noite',t:'Na cama no horário',d:[0,1,2,3,4,5],auto:'bed'},
@@ -339,6 +340,7 @@ const MENU=[
  {n:'Frango desfiado pronto',list:['Pão de forma integral (2 pacotes)','Frango desfiado pronto (2 potes)','Requeijão light (1 pote)']},
 ];
 const BASE=['Iogurte (7)'];
+const ALONG=[['Respirar fundo e girar o pescoço devagar','1 min'],['Gato-vaca, de quatro apoios','1 min 30'],['Postura da criança','1 min 30'],['Flexor do quadril: afundo com um joelho no chão','1 min cada lado'],['Posterior de coxa: sentado, pernas esticadas, alcançar os pés','2 min'],['Glúteo: deitado, tornozelo sobre o joelho (figura 4)','1 min cada lado'],['Torção de coluna deitado','1 min cada lado'],['Panturrilha na parede','1 min'],['Deitado de barriga pra cima, só respirando','1 min']];
 const LDEF={
  presentes:[{t:'Brinco argola pequena',v:60,tipo:'presente'},{t:'Brinco de pérola',v:50,tipo:'presente'},{t:'Brinco de prata delicado',v:80,tipo:'presente'},{t:'Brinco com cristal',v:70,tipo:'presente'},{t:'Ear cuff',v:45,tipo:'presente'},{t:'Kit de brincos',v:60,tipo:'presente'},{t:'Brinco dourado minimalista',v:55,tipo:'presente'},{t:'Buquê de flores',v:60,tipo:'presente'},{t:'Colar delicado',v:90,tipo:'presente'},{t:'Pulseira',v:70,tipo:'presente'},{t:'Anel delicado',v:70,tipo:'presente'},{t:'Body splash',v:60,tipo:'presente'},{t:'Perfume pequeno',v:100,tipo:'presente'},{t:'Hidratante ou skincare que ela usa',v:80,tipo:'presente'},{t:'Batom ou gloss',v:45,tipo:'presente'},{t:'Presilha ou piranha de cabelo',v:30,tipo:'presente'},{t:'Scrunchies de cetim',v:30,tipo:'presente'},{t:'Necessaire',v:50,tipo:'presente'},{t:'Bolsinha pequena',v:100,tipo:'presente'},{t:'Pijama ou meia divertida',v:70,tipo:'presente'},{t:'Vela aromática',v:45,tipo:'presente'},{t:'Caneca personalizada',v:40,tipo:'presente'},{t:'Livro que ela quer',v:60,tipo:'presente'},{t:'Fotos impressas estilo polaroid',v:35,tipo:'presente'},{t:'Pelúcia',v:50,tipo:'presente'},{t:'Esmalte ou kit de unha',v:35,tipo:'presente'},{t:'Vale-jantar num lugar novo',v:100,tipo:'presente'},{t:'(3D) Lithophane com foto de vocês',v:25,tipo:'presente'},{t:'(3D) Porta-joias',v:25,tipo:'presente'},{t:'(3D) Porta-brincos',v:25,tipo:'presente'},{t:'(3D) Vaso com planta',v:40,tipo:'presente'},{t:'(3D) Luminária com o nome dela',v:50,tipo:'presente'},{t:'Caixinha de brigadeiro gourmet',v:35,tipo:'doce'},{t:'Caixa de bombons',v:40,tipo:'doce'},{t:'Brownie recheado',v:25,tipo:'doce'},{t:'Cookies artesanais',v:30,tipo:'doce'},{t:'Trufas',v:30,tipo:'doce'},{t:'Pão de mel',v:25,tipo:'doce'},{t:'Macarons',v:45,tipo:'doce'},{t:'Barra de chocolate especial',v:30,tipo:'doce'},{t:'Alfajor',v:25,tipo:'doce'},{t:'Cupcake',v:25,tipo:'doce'},{t:'Bolo de pote',v:25,tipo:'doce'},{t:'Palha italiana',v:25,tipo:'doce'},{t:'Donut recheado',v:25,tipo:'doce'},{t:'Churros',v:25,tipo:'doce'}],
  leves:['Jantar em casa','Filme com pipoca','Pizza e série','Cozinhar algo juntos','Jogo de tabuleiro ou cartas','Sorvete e volta a pé','Café ou docinho fora','Noite de karaokê em casa','Montar um quebra-cabeça','Fondue','Ver fotos antigas juntos','Spa em casa: máscara e massagem'],
@@ -547,7 +549,7 @@ function vHoje(){
         const tag=st===true?'<span class="tag ok">no horário</span>':st===false?'<span class="tag must">passou</span>':'<span class="tag wait">'+({bed:'registra amanhã cedo',wake:'registra no sono',gift:'use o card Namorado',prog:'use o card Namorado'})[x.auto]+'</span>';
         h+='<div class="row'+(st===true?' done':st===false?' fail':'')+'"><div class="chk" aria-hidden="true">'+CHECK+'</div><span class="t">'+x.t+'</span>'+tag+'</div>';
       }else{const on=!!dd.checks[x.id];
-        h+='<div class="row'+(on?' done':'')+'"><button class="chk" data-h="'+x.id+'" aria-pressed="'+on+'" aria-label="'+esc(x.t)+'">'+CHECK+'</button><span class="t">'+x.t+(x.id==='mercado'?' <span class="tag p">primeira coisa</span>':'')+'</span>'+must+xp+'</div>'}
+        h+='<div class="row'+(on?' done':'')+'"><button class="chk" data-h="'+x.id+'" aria-pressed="'+on+'" aria-label="'+esc(x.t)+'">'+CHECK+'</button><span class="t">'+x.t+(x.id==='mercado'?' <span class="tag p">primeira coisa</span>':'')+(x.guide==='along'?'<details><summary>Ver rotina</summary><ol class="rules" style="margin-top:6px">'+ALONG.map(a=>'<li>'+a[0]+' <span class="sub2">· '+a[1]+'</span></li>').join('')+'</ol><div class="sub2" style="margin-top:6px">Sem forçar: alongamento é leve, nunca até doer. Até a consulta do ombro, pula o que incomodar ele.</div></details>':'')+'</span>'+must+xp+'</div>'}
     }
     h+='</div>'}
 
