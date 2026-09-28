@@ -233,6 +233,12 @@ img{max-width:100%}
 .evi.moved{opacity:.6}
 .tag.warn{background:var(--warn-soft);color:var(--warn)}
 .mc .ev.dn{text-decoration:line-through;opacity:.55}
+.evrow{display:flex;gap:8px;align-items:center}
+.evrow .evi{flex:1;min-width:0}
+.ck{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:none;flex:none;display:grid;place-items:center;padding:0}
+.ck svg{width:13px;height:13px;opacity:0}
+.ck.on{background:var(--accent);border-color:var(--accent)}.ck.on svg{opacity:1}
+.avisos li .ck{width:24px;height:24px;align-self:center}
 .linkb{background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .linkb.dn{text-decoration:line-through;color:var(--muted)}
 .stbox{background:var(--surface2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
@@ -513,7 +519,7 @@ function vHoje(){
   {const late=agenda.filter(e=>(!e.recur||e.recur==='none')&&e.date<TODAY&&e.date>=key(addD(d,-30))&&!evSt(e,e.date)).sort((a,b)=>a.date<b.date?-1:1);
    if(late.length)h+='<div class="card bk"><h3>Ficou pra trás</h3><div class="sub2">Toca pra marcar feito, reagendar ou dar como perdido.</div>'+late.map(e=>evBtn(e,e.date)+'<div class="sub2">'+fmt(e.date)+'</div>').join('')+'</div>'}
   h+='<div class="card"><div class="hrow"><h3>Próximos compromissos</h3><button class="btn small ghost" data-newev="'+TODAY+'">+ Compromisso</button></div>';
-  if(av.length) h+='<ul class="avisos">'+av.slice(0,6).map(a=>'<li class="'+(a.i===0?'hj':'')+'"><span class="when">'+(a.trip?'Viagem':a.i===0?'Hoje':a.i===1?'Amanhã':DNF[parse(a.k).getDay()])+(a.e.time?' '+a.e.time:'')+'</span>'+(a.e.id?'<button class="linkb'+(evSt(a.e,a.k)?' dn':'')+'" data-ev="'+a.e.id+'" data-k="'+a.k+'">'+esc(a.e.title)+'</button> '+stTag(a.e,a.k):'<span>'+esc(a.e.title)+'</span>')+'</li>').join('')+'</ul>';
+  if(av.length) h+='<ul class="avisos">'+av.slice(0,6).map(a=>'<li class="'+(a.i===0?'hj':'')+'"><span class="when">'+(a.trip?'Viagem':a.i===0?'Hoje':a.i===1?'Amanhã':DNF[parse(a.k).getDay()])+(a.e.time?' '+a.e.time:'')+'</span>'+(a.e.id?ckBtn(a.e,a.k)+'<button class="linkb'+(evSt(a.e,a.k)?' dn':'')+'" data-ev="'+a.e.id+'" data-k="'+a.k+'">'+esc(a.e.title)+'</button> '+stTag(a.e,a.k):'<span>'+esc(a.e.title)+'</span>')+'</li>').join('')+'</ul>';
   else h+='<div class="sub2">Nada nos próximos 4 dias.</div>';
   h+='</div>';
 
@@ -603,7 +609,8 @@ function namCard(d){
 let calMode='month', calCur=parse(TODAY), calSel=TODAY;
 function evSt(e,k){return ((e.st||{})[k])||''}
 function stTag(e,k){const st=evSt(e,k);if(st==='feito')return '<span class="tag ok">feito</span>';if(st==='perdido')return '<span class="tag must">perdido</span>';if(st.startsWith('reagendado'))return '<span class="tag p">→ '+fmt(st.split(':')[1])+'</span>';if(e.id&&k<TODAY&&(!e.recur||e.recur==='none'))return '<span class="tag warn">pendente</span>';return ''}
-function evBtn(e,k){const st=evSt(e,k);const cls=st==='feito'?' ok':st==='perdido'?' lost':st.startsWith('reagendado')?' moved':'';return '<button class="evi'+cls+'" data-ev="'+(e.id||'')+'" data-k="'+k+'"><span class="pd '+(e.pillar||'organizado')+'"></span><span class="tm">'+(e.time||'dia')+'</span><span class="tt">'+esc(e.title)+'</span>'+stTag(e,k)+'</button>'}
+function ckBtn(e,k){if(!e.id)return '';const on=evSt(e,k)==='feito';return '<button class="ck'+(on?' on':'')+'" data-evdone="'+e.id+'" data-k="'+k+'" aria-pressed="'+on+'" aria-label="Marcar '+esc(e.title)+' como feito">'+CHECK+'</button>'}
+function evBtn(e,k){const st=evSt(e,k);const cls=st==='feito'?' ok':st==='perdido'?' lost':st.startsWith('reagendado')?' moved':'';const b='<button class="evi'+cls+'" data-ev="'+(e.id||'')+'" data-k="'+k+'"><span class="pd '+(e.pillar||'organizado')+'"></span><span class="tm">'+(e.time||'dia')+'</span><span class="tt">'+esc(e.title)+'</span>'+stTag(e,k)+'</button>';return e.id?'<div class="evrow">'+ckBtn(e,k)+b+'</div>':b}
 function vCal(){
   let h='<div class="caltop"><button class="iconbtn" data-cnav="-1" aria-label="Anterior">‹</button><h2>';
   let ks;
@@ -731,6 +738,9 @@ document.addEventListener('click',e=>{
   else if(ds.sh){const w=ds.wk;const W=weeks[w]||(weeks[w]={shop:{}});W.shop=W.shop||{};W.shop[ds.sh]=!W.shop[ds.sh];if(!W.shop[ds.sh])delete W.shop[ds.sh];saveWeek(w);render()}
   else if(ds.roll){const w=ds.roll;const W=weeks[w]||(weeks[w]={shop:{}});const cur=sandIdx(w);let n=cur;while(n===cur)n=Math.floor(Math.random()*MENU.length);W.sand=n;W.shop={};saveWeek(w);render();const s=$('#sand');if(s){s.classList.add('spin')}}
   else if(ds.newev!==undefined){openSheet(null,ds.newev)}
+  else if(ds.evdone){const ev=agenda.find(x=>x.id===ds.evdone);const k=ds.k;if(!ev||!k)return;ev.st=ev.st||{};const dd=day(TODAY);dd.bonus=dd.bonus||{};const bk='ev_'+ev.id+'_'+k;const b=dayXP(TODAY);
+    if(ev.st[k]==='feito'){delete ev.st[k];delete dd.bonus[bk]}else{ev.st[k]='feito';dd.bonus[bk]=10}
+    saveEv(ev);saveDay(TODAY);gain(b);render()}
   else if(ds.ev){const ev=agenda.find(x=>x.id===ds.ev);if(ev)openSheet(ev,ds.k)}
   else if(ds.est){const ev=agenda.find(x=>x.id===$('#evid').value);const k=sheetK;if(!ev||!k)return;ev.st=ev.st||{};const dd=day(TODAY);dd.bonus=dd.bonus||{};const bk='ev_'+ev.id+'_'+k;
     if(ds.est==='feito'){const b=dayXP(TODAY);ev.st[k]='feito';dd.bonus[bk]=10;saveDay(TODAY);saveEv(ev);gain(b)}
