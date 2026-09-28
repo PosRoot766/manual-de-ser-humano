@@ -284,7 +284,7 @@ input[type=email],input[type=password]{background:var(--surface);border:1px soli
       <option value="monthly">Todo mês</option><option value="lastwd">Último mesmo dia da semana do mês</option><option value="semiannual">A cada 6 meses</option><option value="yearly">Todo ano</option>
     </select>
     <textarea id="evn" rows="3" placeholder="O que vamos fazer? (opcional)" aria-label="Detalhes"></textarea>
-    <input type="hidden" id="evkind"><label class="chkl"><input type="checkbox" id="evk"> Programa a dois</label>
+    <input type="hidden" id="evkind"><input type="hidden" id="evpend"><label class="chkl"><input type="checkbox" id="evk"> Programa a dois</label>
     <div class="acts"><button type="button" class="btn danger" id="evdel" hidden>Apagar</button><span style="flex:1"></span><button type="button" class="btn ghost" id="evcancel">Cancelar</button><button type="submit" class="btn">Salvar</button></div>
   </form>
 </div>
@@ -396,8 +396,9 @@ let gbud=lget('gbud')||60;
 const pick=(arr,not)=>{if(!arr.length)return null;if(arr.length===1)return arr[0];let x=not;while(x===not)x=arr[Math.floor(Math.random()*arr.length)];return x};
 const isProg=e=>e.pillar==='namorado'&&e.kind==='programa';
 function wkndDates(k){const d=parse(k),wd=d.getDay();const fri=key(addD(d,(5-wd+7)%7));return {fri,sat:key(addD(parse(fri),1))}}
-function slotEv(date,kind){return agenda.find(e=>e.date===date&&e.pillar==='namorado'&&e.kind===kind)}
-function wkndPlanned(k){const w=wkndDates(k);const a=slotEv(w.fri,'sexta'),b=slotEv(w.sat,'programa');return !!(a&&a.ok&&b&&b.ok)}
+function slotEv(date){const l=evOn(date).filter(e=>e.id&&e.pillar==='namorado'&&(e.kind==='sexta'||e.kind==='programa'));return l.find(e=>!e.pend)||l[0]}
+const slotDone=e=>!!(e&&!e.pend);
+function wkndPlanned(k){const w=wkndDates(k);return slotDone(slotEv(w.fri))&&slotDone(slotEv(w.sat))}
 function progBetween(a,b){for(const k of range(a,b)){if(evOn(k).some(isProg))return k}return null}
 function lastDR(){const ks=Object.keys(days).filter(k=>days[k].bonus&&days[k].bonus.dr).sort();return ks[ks.length-1]||null}
 function tripNext(t){for(const [s,l,dd] of TST){if(t.stages&&t.stages[s])continue;return {s,l,due:key(addD(parse(t.date),-dd))}}return null}
@@ -597,9 +598,9 @@ function giftCard(wd){
   h+='<div class="sub2">'+(wd===3?'<b style="color:var(--warn)">Hoje é dia de sortear.</b>':late?'<b style="color:var(--bad)">Sorteio de quarta atrasado.</b>':'Próximo sorteio: '+fmt(nextWed)+'.')+' Presente: você põe a chegada e a entrega cai no fim de semana. Doce: vai pra sexta da próxima semana sem presente chegando.</div>';
   if(canSort)h+='<div class="btns" style="align-items:center">'+budIn('x')+'<select id="gtipo" aria-label="Tipo" style="width:auto"><option value="">Qualquer</option><option value="presente">Presente</option><option value="doce">Doce</option></select><button class="btn small" data-gnew>Sortear</button></div>';
   return h+'</div>'}
-function slotHtml(rk,date){const kind=rk==='fri'?'sexta':'programa';const e=slotEv(date,kind);
+function slotHtml(rk,date){const e=slotEv(date);
   let h='<div class="trip"><div class="hrow"><span class="nt">'+(rk==='fri'?'Sexta à noite · leve':'Sábado · programa')+'</span><span class="sub2">'+fmt(date)+'</span></div>';
-  if(e){h+=evBtn(e,date)+(e.notes?'<div class="q" style="font-style:normal;white-space:pre-wrap">'+esc(e.notes)+'</div>':'')+(e.ok?'<div class="sub2" style="color:var(--accent)">Combinado com ela.</div>':'<div class="btns"><button class="btn small" data-wok="'+e.id+'">Combinei com ela</button></div>')}
+  if(e){h+=evBtn(e,date)+(e.notes?'<div class="q" style="font-style:normal;white-space:pre-wrap">'+esc(e.notes)+'</div>':'')+'<div class="btns"><button class="btn small" data-wok="'+e.id+'">Combinei com ela</button></div>'}
   else{if(rolled[rk])h+='<div class="q">'+esc(rolled[rk])+'</div>';
     h+='<div class="btns"><button class="btn small ghost" data-wroll="'+rk+'">'+(rolled[rk]?'Outra ideia':'Sortear')+'</button>'+(rolled[rk]?'<button class="btn small" data-wmark="'+rk+'" data-d="'+date+'">Marcar</button>':'')+'<button class="btn small ghost" data-wwrite="'+rk+'" data-d="'+date+'">Escrever</button></div>'}
   return h+'</div>'}
@@ -607,9 +608,9 @@ function nextSat(d){return key(addD(d,((6-d.getDay()+7)%7)||7))}
 function namCard(d){
   const wd=d.getDay();let h='';
   h+=giftCard(wd);
-  const plan=(wd===4&&!wkndPlanned(TODAY))||(wd===5&&!wkndPlanned(TODAY));
+  const plan=(wd===4||wd===5)&&!wkndPlanned(TODAY);
   if(plan){const w=wkndDates(TODAY);
-    h+='<div class="nrow"><div class="label">'+(wd===5?'Fim de semana a dois · atrasado':'Planejar o fim de semana a dois')+'</div><div class="sub2">Escolhe, marca e combina com ela. O card fecha quando os dois estiverem combinados.</div>'+slotHtml('fri',w.fri)+slotHtml('sat',w.sat)+'</div>'}
+    h+='<div class="nrow"><div class="label">'+(wd===5?'Fim de semana a dois · atrasado':'Planejar o fim de semana a dois')+'</div><div class="sub2">Escolhe, marca e combina com ela. O card fecha quando os dois estiverem combinados.</div>'+(slotDone(slotEv(w.fri))||w.fri<TODAY?'':slotHtml('fri',w.fri))+(slotDone(slotEv(w.sat))?'':slotHtml('sat',w.sat))+'</div>'}
   const hoje=evOn(TODAY).filter(e=>e.pillar==='namorado'&&(e.kind==='sexta'||e.kind==='programa'));
   if(hoje.length&&!plan)h+='<div class="nrow"><div class="label">Hoje a dois</div>'+hoje.map(e=>evBtn(e,TODAY)+(e.notes?'<div class="q" style="font-style:normal;white-space:pre-wrap">'+esc(e.notes)+'</div>':'')).join('')+'</div>';
   const ld=lastDR(),since=ld?Math.round((d-parse(ld))/864e5):null;
@@ -656,7 +657,7 @@ function openSheet(ev,dateK,pre){pre=pre||{};sheetK=ev?(dateK||ev.date):null;
   $('#evst').hidden=!ev;if(ev){const st=evSt(ev,sheetK);$('#evstl').textContent='Em '+fmt(sheetK)+(st?' · '+(st.startsWith('reagendado')?'reagendado':st):'');$('#estclear').hidden=!st;$('#evre').value=sheetK}
   $('#evh').textContent=ev?'Editar compromisso':'Novo compromisso';
   $('#evid').value=ev?ev.id:'';$('#evt').value=ev?ev.title:'';$('#evd').value=ev?ev.date:(dateK||TODAY);
-  $('#evtm').value=ev?(ev.time||''):'';$('#evp').value=ev?(ev.pillar||'organizado'):(pre.pillar||'organizado');if(!ev&&pre.title)$('#evt').value=pre.title;$('#evk').checked=ev?ev.kind==='programa':pre.kind==='programa';$('#evn').value=ev?(ev.notes||''):(pre.notes||'');$('#evkind').value=ev?(ev.kind||''):(pre.kind||'');$('#evr').value=ev?(ev.recur||'none'):'none';
+  $('#evtm').value=ev?(ev.time||''):'';$('#evp').value=ev?(ev.pillar||'organizado'):(pre.pillar||'organizado');if(!ev&&pre.title)$('#evt').value=pre.title;$('#evk').checked=ev?ev.kind==='programa':pre.kind==='programa';$('#evn').value=ev?(ev.notes||''):(pre.notes||'');$('#evkind').value=ev?(ev.kind||''):(pre.kind||'');$('#evpend').value=ev?(ev.pend?'1':''):(pre.pend?'1':'');$('#evr').value=ev?(ev.recur||'none'):'none';
   $('#evdel').hidden=!ev;$('#evdel').textContent='Apagar';$('#evdel').dataset.arm='';
   $('#sheet').hidden=false;setTimeout(()=>$('#evt').focus(),50)}
 $('#evp').innerHTML=Object.entries(PILL).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('');
@@ -755,9 +756,9 @@ document.addEventListener('click',e=>{
   else if(ds.roll){const w=ds.roll;const W=weeks[w]||(weeks[w]={shop:{}});const cur=sandIdx(w);let n=cur;while(n===cur)n=Math.floor(Math.random()*MENU.length);W.sand=n;W.shop={};saveWeek(w);render();const s=$('#sand');if(s){s.classList.add('spin')}}
   else if(ds.newev!==undefined){openSheet(null,ds.newev)}
   else if(ds.wroll){const rk=ds.wroll;rolled[rk]=pick(L(rk==='fri'?'leves':'programas'),rolled[rk]);render()}
-  else if(ds.wmark){const rk=ds.wmark;openSheet(null,ds.d,{title:rolled[rk],pillar:'namorado',kind:rk==='fri'?'sexta':'programa'})}
-  else if(ds.wwrite){const rk=ds.wwrite;openSheet(null,ds.d,{pillar:'namorado',kind:rk==='fri'?'sexta':'programa'})}
-  else if(ds.wok){const ev=agenda.find(x=>x.id===ds.wok);if(!ev)return;const b=dayXP(TODAY);ev.ok=true;saveEv(ev);gain(b);render()}
+  else if(ds.wmark){const rk=ds.wmark;openSheet(null,ds.d,{title:rolled[rk],pillar:'namorado',kind:rk==='fri'?'sexta':'programa',pend:true})}
+  else if(ds.wwrite){const rk=ds.wwrite;openSheet(null,ds.d,{pillar:'namorado',kind:rk==='fri'?'sexta':'programa',pend:true})}
+  else if(ds.wok){const ev=agenda.find(x=>x.id===ds.wok);if(!ev)return;const b=dayXP(TODAY);delete ev.pend;ev.ok=true;saveEv(ev);gain(b);render()}
   else if(ds.evdone){const ev=agenda.find(x=>x.id===ds.evdone);const k=ds.k;if(!ev||!k)return;ev.st=ev.st||{};const dd=day(TODAY);dd.bonus=dd.bonus||{};const bk='ev_'+ev.id+'_'+k;const b=dayXP(TODAY);
     if(ev.st[k]==='feito'){delete ev.st[k];delete dd.bonus[bk]}else{ev.st[k]='feito';dd.bonus[bk]=10}
     saveEv(ev);saveDay(TODAY);gain(b);render()}
@@ -813,8 +814,8 @@ document.addEventListener('submit',e=>{e.preventDefault();
   if(e.target.classList&&e.target.classList.contains('lform')){const n=e.target.dataset.list;const inp=e.target.querySelector('input');const v=inp.value.trim();if(!v)return;if(n==='presentes'){const pv=+e.target.querySelectorAll('input')[1].value||null;const tp=e.target.querySelector('select').value;lists[n]={items:[...Lg(),{t:v,v:pv,tipo:tp}]}}else lists[n]={items:[...L(n),v]};saveList(n);render();const f=document.querySelector('.lform[data-list="'+n+'"]');if(f){f.closest('details').open=true;f.querySelector('input').focus()}}
   if(e.target.id==='evform'){const title=$('#evt').value.trim(),date=$('#evd').value;if(!title||!date)return;
     const id=$('#evid').value||('e'+Date.now().toString(36));
-    const ev={id,title,date,time:$('#evtm').value||'',pillar:$('#evp').value,recur:$('#evr').value,kind:$('#evk').checked?'programa':($('#evkind').value==='sexta'?'sexta':''),notes:$('#evn').value.trim()};if(ev.kind==='sexta')rolled.fri=null;if(ev.kind==='programa')rolled.sat=null;if(ev.kind==='programa'&&!$('#evid').value){rolled.prog=null}
-    const i=agenda.findIndex(a=>a.id===id);if(i>=0){if(agenda[i].st)ev.st=agenda[i].st;if(agenda[i].ok)ev.ok=agenda[i].ok;if(agenda[i].from)ev.from=agenda[i].from;agenda[i]=ev}else agenda.push(ev);saveEv(ev);
+    const ev={id,title,date,time:$('#evtm').value||'',pillar:$('#evp').value,recur:$('#evr').value,kind:$('#evk').checked?'programa':($('#evkind').value==='sexta'?'sexta':''),notes:$('#evn').value.trim()};if($('#evpend').value==='1')ev.pend=true;if(ev.kind==='sexta')rolled.fri=null;if(ev.kind==='programa')rolled.sat=null;if(ev.kind==='programa'&&!$('#evid').value){rolled.prog=null}
+    const i=agenda.findIndex(a=>a.id===id);if(i>=0){if(agenda[i].st)ev.st=agenda[i].st;if(agenda[i].from)ev.from=agenda[i].from;agenda[i]=ev}else agenda.push(ev);saveEv(ev);
     $('#sheet').hidden=true;calSel=date;calCur=parse(date);toast('Salvo na agenda');render()}
 });
 $('#evcancel').onclick=()=>{$('#sheet').hidden=true};
