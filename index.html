@@ -229,10 +229,12 @@ img{max-width:100%}
 .gcard h1{font-size:30px;font-weight:800;letter-spacing:-.02em}
 .gcard .btn{padding:12px 16px;font-size:16px}
 .bk{background:var(--warn-soft)}
+.gform{display:flex;flex-direction:column;gap:10px}
+input[type=email],input[type=password]{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;font:inherit;color:inherit}
 </style>
 </head>
 <body>
-<div class="gate" id="gate" hidden><div class="gcard"><h1>Manual de Ser Humano</h1><p class="sub2">Entra com a sua conta Google pra carregar seus dados.</p><button class="btn" id="login">Entrar com Google</button><p class="sub2" id="gerr"></p></div></div>
+<div class="gate" id="gate" hidden><div class="gcard"><h1>Manual de Ser Humano</h1><p class="sub2">Entra na sua conta pra carregar seus dados.</p><form id="pwform" class="gform"><input type="email" id="lemail" placeholder="E-mail" autocomplete="username" required><input type="password" id="lpass" placeholder="Senha" autocomplete="current-password" required><button class="btn" type="submit">Entrar</button></form><button class="btn ghost" id="login">Entrar com Google</button><p class="sub2" id="gerr"></p></div></div>
 
 <div class="wrap">
   <header>
@@ -661,6 +663,8 @@ function vSuc(st){
   const B=badges(st);
   h+='<div class="card"><div class="hrow"><h3>Conquistas</h3><span class="sub2 num">'+B.filter(b=>b[2]).length+'/'+B.length+'</span></div><div class="badges">'+B.map(b=>'<div class="bd'+(b[2]?' on':'')+'"><b>'+b[0]+'</b><span>'+b[1]+'</span></div>').join('')+'</div></div>';
   {const a=bkpAge();h+='<div class="card"><h3>Backup</h3><div class="sub2">'+(a==null?'Nenhum backup ainda.':a===0?'Último backup: hoje.':'Último backup há '+a+' dias.')+' Guarda o arquivo no Drive ou no iCloud. Com ele, você recupera tudo mesmo se o banco sumir.</div><div class="btns"><button class="btn small" data-bkp>Baixar backup</button><label class="btn small ghost" for="imp" style="cursor:pointer">Importar backup</label><input type="file" id="imp" accept="application/json,.json" hidden></div><div class="btns"><button class="btn small ghost" data-logout>Sair da conta</button></div></div>'}
+  {const u=window.__user;const hasPw=!!(u&&u.providerData.some(p=>p.providerId==='password'));
+  h+='<div class="card"><h3>Conta</h3>'+(hasPw?'<div class="sub2">Login por e-mail e senha ativo. Você não depende mais do Google pra entrar.</div>':'<div class="sub2">Cria uma senha pra entrar sem o login do Google. Faz isso uma vez e o iPhone guarda a senha.</div><form id="pwlink" class="sleep"><input type="email" id="npu" autocomplete="username" value="'+esc(u&&u.email||'')+'" readonly style="grid-column:1/-1"><input type="password" id="np1" placeholder="Nova senha" autocomplete="new-password"><input type="password" id="np2" placeholder="Repita a senha" autocomplete="new-password"><button class="btn" type="submit" style="grid-column:1/-1">Criar senha</button></form>')+'</div>'}
   h+='<div class="card"><h3>Conexão com o Claude</h3><div class="sub2">'+(window.__ccode?'Com isso o Claude consegue colocar compromissos na sua agenda. Copia o código e manda pra ele no chat, só uma vez.':'Gerando a chave de conexão...')+'</div>'+(window.__ccode?'<div class="btns"><button class="btn small" data-ccopy>Copiar código</button></div><textarea id="ccode" rows="3" readonly hidden></textarea>':'')+'</div>';
   h+='<div class="card"><h3>Regras do jogo</h3><ul class="rules"><li>Nunca falhar o mesmo hábito dois dias seguidos. Falhou ontem, hoje é inegociável.</li><li>Meta da semana: 80%. Cem por cento não é a meta.</li><li>Sexta: noite a dois leve. Sábado: manhã sua, programa à tarde ou à noite. Domingo: mercado, tempo separado, cama às 22:30.</li><li>Menos horas juntos, mais intenção.</li><li>Nada de hábito novo antes do atual ficar automático.</li><li>O homem e o idiota jogam no mesmo time.</li></ul></div>';
   $('#v-suc').innerHTML=h;
@@ -780,6 +784,14 @@ render();
       if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/cancelled-popup-request'].includes(e.code)){try{await auth.signInWithRedirect(p)}catch(e2){gerr('Não deu pra entrar: '+(e2.message||e2.code))}}
       else if(e.code!=='auth/popup-closed-by-user')gerr('Não deu pra entrar: '+(e.message||e.code))}};
   auth.getRedirectResult().catch(e=>gerr('Não deu pra entrar: '+(e.message||e.code)));
+  $('#pwform').addEventListener('submit',async e=>{e.preventDefault();gerr('');
+    try{await auth.signInWithEmailAndPassword($('#lemail').value.trim(),$('#lpass').value)}
+    catch(er){gerr(['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-login-credentials'].includes(er.code)?'E-mail ou senha errados. Se ainda não criou a senha, entra com Google e cria em Sucesso → Conta.':er.code==='auth/operation-not-allowed'?'O login por senha ainda não foi ativado no Firebase.':'Não deu pra entrar: '+(er.message||er.code))}});
+  document.addEventListener('submit',async e=>{if(e.target.id!=='pwlink')return;e.preventDefault();
+    const a=$('#np1').value,b=$('#np2').value,u=auth.currentUser;if(!u)return;
+    if(a.length<6){toast('A senha precisa de pelo menos 6 caracteres');return}if(a!==b){toast('As senhas não batem');return}
+    try{await u.linkWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,a));await u.reload();window.__user=auth.currentUser;toast('Senha criada. Pode entrar com ela daqui pra frente.');render()}
+    catch(er){toast(er.code==='auth/requires-recent-login'?'Sai da conta, entra com Google de novo e cria a senha logo em seguida.':er.code==='auth/operation-not-allowed'?'Ativa o login por senha no Firebase primeiro.':'Não deu: '+(er.message||er.code))}});
   let unsubs=[];
   const soft=()=>{const a=document.activeElement;if(a&&a.matches&&a.matches('input[type=text],textarea')&&a.value)return;if(!$('#sheet').hidden)return;render()};
   const clone=v=>JSON.parse(JSON.stringify(v));
@@ -825,6 +837,7 @@ render();
   }
   auth.onAuthStateChanged(u=>{
     unsubs.forEach(f=>f());unsubs=[];db=null;
+    window.__user=u||null;
     if(!u){$('#gate').hidden=false;note('desconectado');return}
     $('#gate').hidden=true;gerr('');start()});
 })();

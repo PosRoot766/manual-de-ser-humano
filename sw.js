@@ -1,5 +1,5 @@
 // Service worker: deixa o app abrir offline e pega versões novas quando tem internet.
-const CACHE = 'manual-v2';
+const CACHE = 'manual-v3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
