@@ -639,6 +639,18 @@ function slotHtml(rk,date){const e=slotEv(date);
   else{if(rolled[rk])h+='<div class="q">'+esc(rolled[rk])+'</div>';
     h+='<div class="btns"><button class="btn small ghost" data-wroll="'+rk+'">'+(rolled[rk]?'Outra ideia':'Sortear')+'</button>'+(rolled[rk]?'<button class="btn small" data-wmark="'+rk+'" data-d="'+date+'">Marcar</button>':'')+'<button class="btn small ghost" data-wwrite="'+rk+'" data-d="'+date+'">Escrever</button></div>'}
   return h+'</div>'}
+function importMSH(txt){
+  const m=(txt||'').match(/MSH\s*:?\s*(\[[\s\S]*\]|\{[\s\S]*\})/);if(!m){toast('Não achei um código MSH no texto');return 0}
+  let arr;try{arr=JSON.parse(m[1])}catch(e){toast('Código com erro. Pede pro Claude gerar de novo.');return 0}
+  if(!Array.isArray(arr))arr=[arr];let n=0;
+  for(const o of arr){
+    if(o.del){if(agenda.some(a=>a.id===o.del)){delEv(o.del);n++}continue}
+    const title=String(o.t||o.title||'').trim(),date=String(o.d||o.date||'');if(!title||!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+    const pil=['saude','namorado','filho','organizado'].includes(o.p)?o.p:'organizado';
+    const ev={id:o.id||('c-'+Date.now().toString(36)+n),title,date,time:/^\d{2}:\d{2}$/.test(o.h||'')?o.h:'',pillar:pil,recur:['none','daily','weekly','monthly','lastwd','semiannual','yearly'].includes(o.r)?o.r:'none',
+      kind:o.prog?'programa':'',notes:String(o.n||''),cat:CATS[o.c]?o.c:'',deadline:!!o.prazo};
+    const i=agenda.findIndex(a=>a.id===ev.id);if(i>=0){if(agenda[i].st)ev.st=agenda[i].st;agenda[i]=ev}else agenda.push(ev);saveEv(ev);n++}
+  toast(n?(n+(n>1?' compromissos adicionados':' compromisso adicionado')):'Nada pra adicionar');if(n)render();return n}
 function nextSat(d){return key(addD(d,((6-d.getDay()+7)%7)||7))}
 function namCard(d){
   const wd=d.getDay();let h='';
@@ -669,7 +681,7 @@ function vCal(){
   if(calMode==='month'){h+=MNF[calCur.getMonth()]+' '+calCur.getFullYear()}
   else{const m=monday(calCur);ks=[...Array(7)].map((_,i)=>key(addD(m,i)));const a=parse(ks[0]),b=parse(ks[6]);h+=a.getDate()+' '+MN[a.getMonth()]+' – '+b.getDate()+' '+MN[b.getMonth()]}
   h+='</h2><button class="iconbtn" data-cnav="1" aria-label="Próximo">›</button><div class="seg"><button data-cm="month" aria-pressed="'+(calMode==='month')+'">Mês</button><button data-cm="week" aria-pressed="'+(calMode==='week')+'">Semana</button></div><button class="btn small ghost" data-ctoday>Hoje</button></div>';
-  h+='<button class="btn" data-newev="'+(calMode==='month'?calSel:TODAY)+'">+ Novo compromisso</button>';
+  h+='<div class="btns"><button class="btn" data-newev="'+(calMode==='month'?calSel:TODAY)+'">+ Novo compromisso</button><button class="btn ghost" data-paste>Colar do Claude</button></div><div id="pastebox" hidden class="card"><div class="sub2">Não consegui ler a área de transferência. Cola o código aqui:</div><textarea id="pastetxt" rows="3"></textarea><div class="btns"><button class="btn small" data-pasteok>Adicionar</button></div></div>';
   if(calMode==='month'){
     const first=new Date(calCur.getFullYear(),calCur.getMonth(),1);const start=monday(first);
     h+='<div class="month">'+['seg','ter','qua','qui','sex','sáb','dom'].map(x=>'<div class="dh">'+x+'</div>').join('');
@@ -802,6 +814,8 @@ document.addEventListener('click',e=>{
   else if(ds.wmark){const rk=ds.wmark;openSheet(null,ds.d,{title:rolled[rk],pillar:'namorado',kind:rk==='fri'?'sexta':'programa',pend:true})}
   else if(ds.wwrite){const rk=ds.wwrite;openSheet(null,ds.d,{pillar:'namorado',kind:rk==='fri'?'sexta':'programa',pend:true})}
   else if(ds.wok){const ev=agenda.find(x=>x.id===ds.wok);if(!ev)return;const b=dayXP(TODAY);delete ev.pend;ev.ok=true;saveEv(ev);gain(b);render()}
+  else if(ds.paste!==undefined){(navigator.clipboard&&navigator.clipboard.readText?navigator.clipboard.readText():Promise.reject()).then(t=>{if(!importMSH(t)){$('#pastebox').hidden=false}}).catch(()=>{$('#pastebox').hidden=false;$('#pastetxt').focus()})}
+  else if(ds.pasteok!==undefined){if(importMSH($('#pastetxt').value)){$('#pastetxt').value='';$('#pastebox').hidden=true}}
   else if(ds.evdone){const ev=agenda.find(x=>x.id===ds.evdone);const k=ds.k;if(!ev||!k)return;ev.st=ev.st||{};const dd=day(TODAY);dd.bonus=dd.bonus||{};const bk='ev_'+ev.id+'_'+k;const b=dayXP(TODAY);
     if(ev.st[k]==='feito'){delete ev.st[k];delete dd.bonus[bk]}else{ev.st[k]='feito';dd.bonus[bk]=10}
     saveEv(ev);saveDay(TODAY);gain(b);render()}

@@ -26,3 +26,13 @@ Ao mudar `index.html`, suba o número em `CACHE` no `sw.js` pra forçar a atuali
 O Claude adiciona compromissos com `tools/inbox.py`, que grava mensagens criptografadas em `inbox.json`.
 O app descriptografa com a chave privada guardada no Firebase (`meta/claudekey`) e aplica na agenda ao abrir.
 A chave pública fica em `tools/claude_pubkey.txt` (Sucesso → Conexão com o Claude → Copiar código).
+
+## Código MSH (Claude no celular → agenda)
+
+Qualquer chat do Claude pode gerar um código pra colar em **Calendário → Colar do Claude**:
+
+```
+MSH[{"t":"Dentista","d":"2026-10-12","h":"15:00","p":"saude","c":"pessoal","r":"none","n":"obs","prazo":false,"prog":false}]
+```
+
+Campos: `t` título, `d` data AAAA-MM-DD (obrigatórios); `h` hora; `p` pilar (saude, namorado, filho, organizado); `c` categoria (faculdade, estudo, trabalho, pessoal); `r` repetição (none, daily, weekly, monthly, lastwd, semiannual, yearly); `n` notas; `prazo` true para contagem regressiva; `prog` true para programa a dois; `id` opcional para editar um existente. `{"del":"id"}` apaga.
