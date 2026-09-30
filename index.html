@@ -283,6 +283,8 @@ input[type=email],input[type=password]{background:var(--surface);border:1px soli
       <option value="none">Não repete</option><option value="daily">Todo dia</option><option value="weekly">Toda semana</option>
       <option value="monthly">Todo mês</option><option value="lastwd">Último mesmo dia da semana do mês</option><option value="semiannual">A cada 6 meses</option><option value="yearly">Todo ano</option>
     </select>
+    <select id="evc" class="half" aria-label="Categoria"><option value="">Sem categoria</option><option value="faculdade">Faculdade</option><option value="estudo">Estudo</option><option value="trabalho">Trabalho</option><option value="pessoal">Pessoal</option></select>
+    <label class="chkl half"><input type="checkbox" id="evdl"> É prazo</label>
     <textarea id="evn" rows="3" placeholder="O que vamos fazer? (opcional)" aria-label="Detalhes"></textarea>
     <input type="hidden" id="evkind"><input type="hidden" id="evpend"><label class="chkl"><input type="checkbox" id="evk"> Programa a dois</label>
     <div class="acts"><button type="button" class="btn danger" id="evdel" hidden>Apagar</button><span style="flex:1"></span><button type="button" class="btn ghost" id="evcancel">Cancelar</button><button type="submit" class="btn">Salvar</button></div>
@@ -309,11 +311,15 @@ const LEVELS=[[0,'Baderna'],[150,'Idiota funcional'],[400,'Aprendiz'],[800,'Home
 
 const H=[
  {id:'mercado',g:'acordar',t:'Mercado: provisões da semana',d:[0],xp:20},
+ {id:'acordar6',g:'acordar',t:'Acordar até 6:00',d:WD,auto:'wake6',penalty:15},
  {id:'banho_am',g:'acordar',t:'Banho',d:ALL},
  {id:'dentes_am',g:'acordar',t:'Escovar os dentes',d:ALL},
  {id:'cafe',g:'acordar',t:'Café: iogurte + café com leite',d:ALL},
+ {id:'along',g:'acordar',t:'Alongamento 15 min',d:ALL,guide:'along'},
+ {id:'agenda_am',g:'acordar',t:'Olhar a agenda do dia',d:ALL},
  {id:'bomdia',g:'acordar',t:'Mensagem carinhosa de bom dia',d:ALL,p:'namorado'},
  {id:'acordar_cedo',g:'acordar',t:'Acordar até 8h30',d:[0,6],auto:'wake'},
+ {id:'revisao',g:'dia',t:'Revisão da semana no calendário',d:[0],xp:20},
  {id:'dentes_almoco',g:'dia',t:'Dentes depois do almoço',d:ALL},
  {id:'agua',g:'dia',t:'Garrafinhas de água',d:ALL,count:true,xp:15},
  {id:'refri',g:'dia',t:'Zero refri',d:ALL},
@@ -325,7 +331,6 @@ const H=[
  {id:'banho_pm',g:'noite',t:'Banho',d:WD},
  {id:'dentes_pm',g:'noite',t:'Escovar os dentes',d:ALL},
  {id:'montar',g:'noite',t:'Montar sanduíches de amanhã',d:[0,1,2,3,4]},
- {id:'along',g:'noite',t:'Alongamento 15 min',d:ALL,guide:'along'},
  {id:'noite2',g:'noite',t:'Noite a dois leve: jantar, filme, conversa',d:[5],p:'namorado'},
  {id:'semtela',g:'noite',t:'30 min sem tela',d:ALL},
  {id:'cama',g:'noite',t:'Na cama no horário',d:[0,1,2,3,4,5],auto:'bed'},
@@ -341,6 +346,8 @@ const MENU=[
 ];
 const BASE=['Iogurte (7)'];
 const ALONG=[['Respirar fundo e girar o pescoço devagar','1 min'],['Gato-vaca, de quatro apoios','1 min 30'],['Postura da criança','1 min 30'],['Flexor do quadril: afundo com um joelho no chão','1 min cada lado'],['Posterior de coxa: sentado, pernas esticadas, alcançar os pés','2 min'],['Glúteo: deitado, tornozelo sobre o joelho (figura 4)','1 min cada lado'],['Torção de coluna deitado','1 min cada lado'],['Panturrilha na parede','1 min'],['Deitado de barriga pra cima, só respirando','1 min']];
+const QUARTO=['Embaixo da cama','Prateleira','Escrivaninha','Mesa de estudos','Mesa do computador','Armário de roupa','Armário de tralha'];
+const CATS={faculdade:'Faculdade',estudo:'Estudo',trabalho:'Trabalho',pessoal:'Pessoal'};
 const LDEF={
  presentes:[{t:'Brinco argola pequena',v:60,tipo:'presente'},{t:'Brinco de pérola',v:50,tipo:'presente'},{t:'Brinco de prata delicado',v:80,tipo:'presente'},{t:'Brinco com cristal',v:70,tipo:'presente'},{t:'Ear cuff',v:45,tipo:'presente'},{t:'Kit de brincos',v:60,tipo:'presente'},{t:'Brinco dourado minimalista',v:55,tipo:'presente'},{t:'Buquê de flores',v:60,tipo:'presente'},{t:'Colar delicado',v:90,tipo:'presente'},{t:'Pulseira',v:70,tipo:'presente'},{t:'Anel delicado',v:70,tipo:'presente'},{t:'Body splash',v:60,tipo:'presente'},{t:'Perfume pequeno',v:100,tipo:'presente'},{t:'Hidratante ou skincare que ela usa',v:80,tipo:'presente'},{t:'Batom ou gloss',v:45,tipo:'presente'},{t:'Presilha ou piranha de cabelo',v:30,tipo:'presente'},{t:'Scrunchies de cetim',v:30,tipo:'presente'},{t:'Necessaire',v:50,tipo:'presente'},{t:'Bolsinha pequena',v:100,tipo:'presente'},{t:'Pijama ou meia divertida',v:70,tipo:'presente'},{t:'Vela aromática',v:45,tipo:'presente'},{t:'Caneca personalizada',v:40,tipo:'presente'},{t:'Livro que ela quer',v:60,tipo:'presente'},{t:'Fotos impressas estilo polaroid',v:35,tipo:'presente'},{t:'Pelúcia',v:50,tipo:'presente'},{t:'Esmalte ou kit de unha',v:35,tipo:'presente'},{t:'Vale-jantar num lugar novo',v:100,tipo:'presente'},{t:'(3D) Lithophane com foto de vocês',v:25,tipo:'presente'},{t:'(3D) Porta-joias',v:25,tipo:'presente'},{t:'(3D) Porta-brincos',v:25,tipo:'presente'},{t:'(3D) Vaso com planta',v:40,tipo:'presente'},{t:'(3D) Luminária com o nome dela',v:50,tipo:'presente'},{t:'Caixinha de brigadeiro gourmet',v:35,tipo:'doce'},{t:'Caixa de bombons',v:40,tipo:'doce'},{t:'Brownie recheado',v:25,tipo:'doce'},{t:'Cookies artesanais',v:30,tipo:'doce'},{t:'Trufas',v:30,tipo:'doce'},{t:'Pão de mel',v:25,tipo:'doce'},{t:'Macarons',v:45,tipo:'doce'},{t:'Barra de chocolate especial',v:30,tipo:'doce'},{t:'Alfajor',v:25,tipo:'doce'},{t:'Cupcake',v:25,tipo:'doce'},{t:'Bolo de pote',v:25,tipo:'doce'},{t:'Palha italiana',v:25,tipo:'doce'},{t:'Donut recheado',v:25,tipo:'doce'},{t:'Churros',v:25,tipo:'doce'}],
  leves:['Jantar em casa','Filme com pipoca','Pizza e série','Cozinhar algo juntos','Jogo de tabuleiro ou cartas','Sorvete e volta a pé','Café ou docinho fora','Noite de karaokê em casa','Montar um quebra-cabeça','Fondue','Ver fotos antigas juntos','Spa em casa: máscara e massagem'],
@@ -431,6 +438,7 @@ function bkpAge(){if(!lastBkp)return null;return Math.round((parse(TODAY)-parse(
 /* ---------- regras e pontos ---------- */
 const applies=(h,k)=>h.d.includes(parse(k).getDay())&&(!h.from||k>=h.from);
 function autoState(h,k){const dd=days[k];
+  if(h.auto==='wake6'){const w=dd&&toMin(dd.acordei);if(w==null)return null;return w<=6*60}
   if(h.auto==='wake'){const w=dd&&toMin(dd.acordei);if(w==null)return null;return w<=8*60+30}
   if(h.auto==='gift'){const a=key(addD(parse(k),-6));return gifts.some(g=>g.created>=a&&g.created<=k&&g.status!=='escolhido')?true:null}
   if(h.auto==='prog'){return wkndPlanned(k)?true:null}
@@ -444,6 +452,7 @@ function score(k){const hs=H.filter(h=>applies(h,k));const n=hs.filter(h=>isDone
 function dayXP(k){const dd=days[k];if(!dd)return 0;let x=0;
   for(const h of H) if(applies(h,k)&&isDone(h,k)) x+=h.xp||10;
   if(dd.acordei)x+=5; if(dd.dormi)x+=5;
+  for(const h of H) if(h.penalty&&applies(h,k)&&autoState(h,k)===false) x-=h.penalty;
   if(dd.bonus)for(const v of Object.values(dd.bonus))x+=v;
   const s=score(k); if(s.p>=80)x+=25; if(s.p===100)x+=25; return x}
 function firstDay(){if(TODAY>=START)return START;const ks=Object.keys(days).sort();return ks[0]||TODAY}
@@ -456,6 +465,28 @@ function stats(){
   return {xp,cur,best,li,ks}
 }
 function habitRun(id,ks,need){const h=H.find(x=>x.id===id);let run=0;for(const k of ks){if(!applies(h,k))continue;if(isDone(h,k)){run++;if(run>=need)return true}else if(k!==TODAY)run=0}return false}
+function quartoStreak(){let n=0;let d=parse(TODAY);for(let i=0;i<60;i++){const q=(days[key(d)]||{}).quarto;if(q==='bag'){n++;d=addD(d,-1)}else if(q==null&&i===0){d=addD(d,-1)}else break}return n}
+function lastSun(){const d=parse(TODAY);return key(addD(d,-d.getDay()))}
+function orgPick(){const recent=[];for(let i=1;i<=6;i++){const o=(days[key(addD(parse(lastSun()),-7*i))]||{}).org;if(o&&o.area)recent.push(o.area)}
+  const cur=((days[lastSun()]||{}).org||{}).area;let pool=QUARTO.filter(a=>!recent.includes(a)&&a!==cur);if(!pool.length)pool=QUARTO.filter(a=>a!==cur);return pool[Math.floor(Math.random()*pool.length)]}
+function quartoCard(){
+  const dd=day(TODAY),q=dd.quarto,st=quartoStreak(),sun=lastSun(),o=(days[sun]||{}).org,isSun=parse(TODAY).getDay()===0;
+  let h='<div class="card"><div class="hrow"><h3>Quarto</h3>'+(st?'<span class="tag must">bagunçado há '+st+(st>1?' dias':' dia')+'</span>':q==='ok'||q==='arrumei'?'<span class="tag ok">em ordem</span>':'')+'</div>';
+  if(!q)h+='<div class="sub2">Tá arrumado hoje?</div><div class="btns"><button class="btn small" data-qz="ok">Tá arrumado</button><button class="btn small ghost" data-qz="bag">Tá bagunçado</button></div>';
+  else if(q==='bag')h+='<div class="sub2">Sem obrigação. Se der vontade, arruma e ganha XP.</div><div class="btns"><button class="btn small" data-qz="arrumei">Arrumei agora <span class="xp">+15</span></button><button class="btn small ghost" data-qz="">Mudar resposta</button></div>';
+  else h+='<div class="sub2">'+(q==='arrumei'?'Arrumou hoje. Boa.':'Quarto em ordem hoje.')+'</div><div class="btns"><button class="btn small ghost" data-qz="">Mudar resposta</button></div>';
+  if(isSun||(o&&o.area&&!o.done)){
+    h+='<div class="nrow"><div class="label">Organização da semana</div>';
+    if(!o||!o.area)h+='<div class="sub2">Sorteia uma área pra organizar de verdade.</div><div class="btns"><button class="btn small" data-org="roll">Sortear área</button></div>';
+    else if(!o.done)h+='<div class="hrow"><span class="nt">'+esc(o.area)+'</span>'+(isSun?'':'<span class="tag warn">de domingo</span>')+'</div><div class="btns"><button class="btn small" data-org="done">Organizei <span class="xp">+30</span></button>'+(isSun?'<button class="btn small ghost" data-org="roll">Sortear outra</button>':'')+'</div>';
+    else h+='<div class="hrow"><span class="nt">'+esc(o.area)+'</span><span class="tag ok">organizado</span></div>';
+    h+='</div>'}
+  return h+'</div>'}
+function nextDeadlines(){const out=[];for(let i=0;i<=400&&out.length<3;i++){const k=key(addD(parse(TODAY),i));for(const e of evOn(k))if(e.id&&e.deadline&&!evSt(e,k))out.push({k,e,n:i})}return out}
+function prazoCard(){const L=nextDeadlines();if(!L.length)return '';const a=L[0];
+  let h='<div class="card"><div class="label">Próximo prazo</div><div class="hrow"><div><div class="nt" style="font-size:17px">'+esc(a.e.title)+'</div><div class="sub2">'+fmt(a.k)+(a.e.cat?' · '+CATS[a.e.cat]:'')+'</div></div><div style="text-align:right"><b class="num" style="font-family:var(--display);font-size:34px;line-height:1;color:'+(a.n<=3?'var(--bad)':a.n<=10?'var(--warn)':'var(--ink)')+'">'+(a.n===0?'hoje':a.n)+'</b><div class="sub2">'+(a.n===0?'':a.n===1?'dia':'dias')+'</div></div></div>';
+  if(L.length>1)h+=L.slice(1).map(o=>'<div class="hrow sub2"><span>'+esc(o.e.title)+'</span><span class="num">'+o.n+' d</span></div>').join('');
+  return h+'</div>'}
 function badges(st){
   const ks=st.ks;const past=ks.filter(k=>k<TODAY||score(k).p>=80);
   const weekOk=(()=>{const mons=new Set(ks.map(k=>key(monday(parse(k)))));for(const m of mons){const w=range(m,key(addD(parse(m),6)));if(w[6]>=TODAY)continue;const avg=w.reduce((s,k)=>s+score(k).p,0)/7;if(avg>=80)return true}return false})();
@@ -520,6 +551,7 @@ function vHoje(){
   let h='<div class="card"><div class="today"><b class="num">'+s.p+'%</b><div class="meta"><div class="pbar"><i style="width:'+s.p+'%"></i></div><div class="sub2">'+s.n+' de '+s.t+' feitos · '+(s.p>=80?'bônus de 80% garantido':'80% vale +25 XP')+' · hoje: <span class="num">'+dayXP(TODAY)+' XP</span></div></div></div></div>';
 
   {const a=bkpAge();if(TODAY>=START&&(a==null||a>=30))h+='<div class="card bk"><div class="hrow"><div><h3>Backup do mês</h3><div class="sub2">'+(a==null?'Você ainda não fez nenhum backup.':'Último backup há '+a+' dias.')+'</div></div><button class="btn small" data-bkp>Baixar</button></div></div>'}
+  h+=prazoCard();
   // avisos do calendário
   const av=[];for(let i=0;i<4;i++){const k=key(addD(d,i));for(const e of evOn(k))av.push({i,k,e})}
   for(const t of trips){const n=tripNext(t);if(n&&n.due<=key(addD(d,7))){const late=n.due<TODAY;av.unshift({i:late?0:9,k:n.due,e:{title:'Viagem '+t.dest+': '+n.l.toLowerCase()+(late?' (atrasado)':' até '+n.due.split('-').reverse().slice(0,2).join('/')),time:''},trip:1})}}
@@ -546,13 +578,14 @@ function vHoje(){
         let nx='';if(dd.aguaLast&&n<WATER){const t=new Date(dd.aguaLast);t.setHours(t.getHours()+WATER_H);nx=' · próxima às '+pad(t.getHours())+':'+pad(t.getMinutes())}
         h+='<div class="row'+(n>=WATER?' done':'')+'"><div class="t">'+x.t+' '+must+'<div class="sub2">garrafa de 900 ml a cada 4h'+nx+'</div></div><div class="counter"><button data-w="-1" aria-label="Tirar uma">−</button><div class="drops">'+dr+'</div><button data-w="1" aria-label="Enchi uma">+</button></div></div>';
       }else if(x.auto){const st=autoState(x,TODAY);
-        const tag=st===true?'<span class="tag ok">no horário</span>':st===false?'<span class="tag must">passou</span>':'<span class="tag wait">'+({bed:'registra amanhã cedo',wake:'registra no sono',gift:'use o card Namorado',prog:'use o card Namorado'})[x.auto]+'</span>';
+        const tag=st===true?'<span class="tag ok">no horário</span>':st===false?'<span class="tag must">passou'+(x.penalty?' · −'+x.penalty+' XP':'')+'</span>':'<span class="tag wait">'+({bed:'registra amanhã cedo',wake:'registra no sono',wake6:'registra no sono',gift:'use o card Namorado',prog:'use o card Namorado'})[x.auto]+'</span>';
         h+='<div class="row'+(st===true?' done':st===false?' fail':'')+'"><div class="chk" aria-hidden="true">'+CHECK+'</div><span class="t">'+x.t+'</span>'+tag+'</div>';
       }else{const on=!!dd.checks[x.id];
         h+='<div class="row'+(on?' done':'')+'"><button class="chk" data-h="'+x.id+'" aria-pressed="'+on+'" aria-label="'+esc(x.t)+'">'+CHECK+'</button><span class="t">'+x.t+(x.id==='mercado'?' <span class="tag p">primeira coisa</span>':'')+(x.guide==='along'?'<details><summary>Ver rotina</summary><ol class="rules" style="margin-top:6px">'+ALONG.map(a=>'<li>'+a[0]+' <span class="sub2">· '+a[1]+'</span></li>').join('')+'</ol><div class="sub2" style="margin-top:6px">Sem forçar: alongamento é leve, nunca até doer. Até a consulta do ombro, pula o que incomodar ele.</div></details>':'')+'</span>'+must+xp+'</div>'}
     }
     h+='</div>'}
 
+  h+=quartoCard();
   h+=namCard(d);
   // sanduíche
   const w=sandWeek(d),W=weeks[w]||{shop:{}},si=sandIdx(w),M=MENU[si];
@@ -629,7 +662,7 @@ let calMode='month', calCur=parse(TODAY), calSel=TODAY;
 function evSt(e,k){return ((e.st||{})[k])||''}
 function stTag(e,k){const st=evSt(e,k);if(st==='feito')return '<span class="tag ok">feito</span>';if(st==='perdido')return '<span class="tag must">perdido</span>';if(st.startsWith('reagendado'))return '<span class="tag p">→ '+fmt(st.split(':')[1])+'</span>';if(e.id&&k<TODAY&&(!e.recur||e.recur==='none'))return '<span class="tag warn">pendente</span>';return ''}
 function ckBtn(e,k){if(!e.id)return '';const on=evSt(e,k)==='feito';return '<button class="ck'+(on?' on':'')+'" data-evdone="'+e.id+'" data-k="'+k+'" aria-pressed="'+on+'" aria-label="Marcar '+esc(e.title)+' como feito">'+CHECK+'</button>'}
-function evBtn(e,k){const st=evSt(e,k);const cls=st==='feito'?' ok':st==='perdido'?' lost':st.startsWith('reagendado')?' moved':'';const b='<button class="evi'+cls+'" data-ev="'+(e.id||'')+'" data-k="'+k+'"><span class="pd '+(e.pillar||'organizado')+'"></span><span class="tm">'+(e.time||'dia')+'</span><span class="tt">'+esc(e.title)+'</span>'+stTag(e,k)+'</button>';return e.id?'<div class="evrow">'+ckBtn(e,k)+b+'</div>':b}
+function evBtn(e,k){const st=evSt(e,k);const cls=st==='feito'?' ok':st==='perdido'?' lost':st.startsWith('reagendado')?' moved':'';const b='<button class="evi'+cls+'" data-ev="'+(e.id||'')+'" data-k="'+k+'"><span class="pd '+(e.pillar||'organizado')+'"></span><span class="tm">'+(e.time||'dia')+'</span><span class="tt">'+esc(e.title)+'</span>'+(e.deadline?'<span class="tag warn">prazo</span>':e.cat?'<span class="tag p">'+CATS[e.cat]+'</span>':'')+stTag(e,k)+'</button>';return e.id?'<div class="evrow">'+ckBtn(e,k)+b+'</div>':b}
 function vCal(){
   let h='<div class="caltop"><button class="iconbtn" data-cnav="-1" aria-label="Anterior">‹</button><h2>';
   let ks;
@@ -659,7 +692,7 @@ function openSheet(ev,dateK,pre){pre=pre||{};sheetK=ev?(dateK||ev.date):null;
   $('#evst').hidden=!ev;if(ev){const st=evSt(ev,sheetK);$('#evstl').textContent='Em '+fmt(sheetK)+(st?' · '+(st.startsWith('reagendado')?'reagendado':st):'');$('#estclear').hidden=!st;$('#evre').value=sheetK}
   $('#evh').textContent=ev?'Editar compromisso':'Novo compromisso';
   $('#evid').value=ev?ev.id:'';$('#evt').value=ev?ev.title:'';$('#evd').value=ev?ev.date:(dateK||TODAY);
-  $('#evtm').value=ev?(ev.time||''):'';$('#evp').value=ev?(ev.pillar||'organizado'):(pre.pillar||'organizado');if(!ev&&pre.title)$('#evt').value=pre.title;$('#evk').checked=ev?ev.kind==='programa':pre.kind==='programa';$('#evn').value=ev?(ev.notes||''):(pre.notes||'');$('#evkind').value=ev?(ev.kind||''):(pre.kind||'');$('#evpend').value=ev?(ev.pend?'1':''):(pre.pend?'1':'');$('#evr').value=ev?(ev.recur||'none'):'none';
+  $('#evtm').value=ev?(ev.time||''):'';$('#evp').value=ev?(ev.pillar||'organizado'):(pre.pillar||'organizado');if(!ev&&pre.title)$('#evt').value=pre.title;$('#evk').checked=ev?ev.kind==='programa':pre.kind==='programa';$('#evn').value=ev?(ev.notes||''):(pre.notes||'');$('#evkind').value=ev?(ev.kind||''):(pre.kind||'');$('#evc').value=ev?(ev.cat||''):(pre.cat||'');$('#evdl').checked=ev?!!ev.deadline:!!pre.deadline;$('#evpend').value=ev?(ev.pend?'1':''):(pre.pend?'1':'');$('#evr').value=ev?(ev.recur||'none'):'none';
   $('#evdel').hidden=!ev;$('#evdel').textContent='Apagar';$('#evdel').dataset.arm='';
   $('#sheet').hidden=false;setTimeout(()=>$('#evt').focus(),50)}
 $('#evp').innerHTML=Object.entries(PILL).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('');
@@ -694,6 +727,14 @@ function vSuc(st){
       h+='<tr><td>'+esc(lbl)+'</td>'+ks.map(k=>{if(!applies(x,k))return '<td class="muted">·</td>';if(k>TODAY||!days[k])return '<td><span class="dot f"></span></td>';return '<td><span class="dot '+(isDone(x,k)?'y':'n')+'"></span></td>'}).join('')+'</tr>'}
     h+='</tbody></table></div></div>';
   }else if(sucP==='namorado'){h+=namSuc(ks,wnav)}
+  else if(sucP==='organizado'){
+    let ok=0,bag=0,nr=0;h+='<div class="card">'+wnav+'<h3>Quarto na semana</h3><div class="week">'+ks.map(k=>{const q=(days[k]||{}).quarto;const fut=k>TODAY;if(!fut){if(q==='ok'||q==='arrumei')ok++;else if(q==='bag')bag++;else nr++}
+      const c=q==='ok'||q==='arrumei'?'var(--accent)':q==='bag'?'var(--bad)':'var(--surface2)';return '<div class="wd'+(k===TODAY?' tod':'')+'"><div style="width:22px;height:22px;border-radius:50%;background:'+c+'"></div><small>'+DN[parse(k).getDay()]+'</small></div>'}).join('')+'</div>'+
+      '<div class="sub2">'+ok+' em ordem · '+bag+' bagunçado · '+nr+' sem resposta</div></div>';
+    const hist=Object.keys(days).filter(k=>days[k].org&&days[k].org.area).sort().reverse().slice(0,8);
+    h+='<div class="card"><h3>Áreas organizadas</h3>'+(hist.length?hist.map(k=>'<div class="hrow"><span>'+esc(days[k].org.area)+'</span><span class="tag '+(days[k].org.done?'ok':'warn')+'">'+(days[k].org.done?'feito':'pendente')+' · '+fmt(k)+'</span></div>').join(''):'<div class="sub2">Primeira roleta no domingo.</div>')+'</div>';
+    const pz=nextDeadlines();h+='<div class="card"><h3>Prazos</h3>'+(pz.length?pz.map(o=>evBtn(o.e,o.k)+'<div class="sub2">'+fmt(o.k)+' · faltam '+o.n+' dias</div>').join(''):'<div class="sub2">Nenhum prazo marcado. Ao criar um compromisso, marca "É prazo".</div>')+'</div>';
+  }
   else{
     const evs=[];ks.forEach(k=>evOn(k).filter(e=>e.pillar===sucP).forEach(e=>evs.push({k,e})));
     const fg=[];ks.forEach(k=>(days[k]?.forgot||[]).filter(f=>f.p===sucP).forEach(f=>fg.push({k,f})));
@@ -802,6 +843,13 @@ document.addEventListener('click',e=>{
   else if(ds.bkp!==undefined){doBackup()}
   else if(ds.ccopy!==undefined){const c=window.__ccode||'';(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>toast('Código copiado. Cola no chat do Claude.')).catch(()=>{const t=$('#ccode');t.hidden=false;t.value=c;t.select();toast('Seleciona e copia o texto')})}
   else if(ds.logout!==undefined){if(window.firebase&&firebase.apps.length)firebase.auth().signOut()}
+  else if(ds.qz!==undefined){const dd=day(TODAY),b=dayXP(TODAY);dd.bonus=dd.bonus||{};
+    if(ds.qz===''){delete dd.quarto;delete dd.bonus.quarto}else{dd.quarto=ds.qz;if(ds.qz==='arrumei')dd.bonus.quarto=15;else delete dd.bonus.quarto}
+    saveDay(TODAY);gain(b);render()}
+  else if(ds.org){const sun=lastSun(),sd=day(sun);const b=dayXP(TODAY);
+    if(ds.org==='roll'){sd.org={area:orgPick(),done:false};saveDay(sun)}
+    else if(ds.org==='done'){sd.org.done=true;sd.org.at=TODAY;saveDay(sun);const dd=day(TODAY);dd.bonus=dd.bonus||{};dd.bonus['org_'+sun]=30;saveDay(TODAY);gain(b)}
+    render()}
   else if(ds.sp){sucP=ds.sp;render()}
   else if(ds.so){sucOff=Math.min(0,sucOff+(+ds.so));render()}
 });
@@ -816,7 +864,7 @@ document.addEventListener('submit',e=>{e.preventDefault();
   if(e.target.classList&&e.target.classList.contains('lform')){const n=e.target.dataset.list;const inp=e.target.querySelector('input');const v=inp.value.trim();if(!v)return;if(n==='presentes'){const pv=+e.target.querySelectorAll('input')[1].value||null;const tp=e.target.querySelector('select').value;lists[n]={items:[...Lg(),{t:v,v:pv,tipo:tp}]}}else lists[n]={items:[...L(n),v]};saveList(n);render();const f=document.querySelector('.lform[data-list="'+n+'"]');if(f){f.closest('details').open=true;f.querySelector('input').focus()}}
   if(e.target.id==='evform'){const title=$('#evt').value.trim(),date=$('#evd').value;if(!title||!date)return;
     const id=$('#evid').value||('e'+Date.now().toString(36));
-    const ev={id,title,date,time:$('#evtm').value||'',pillar:$('#evp').value,recur:$('#evr').value,kind:$('#evk').checked?'programa':($('#evkind').value==='sexta'?'sexta':''),notes:$('#evn').value.trim()};if($('#evpend').value==='1')ev.pend=true;if(ev.kind==='sexta')rolled.fri=null;if(ev.kind==='programa')rolled.sat=null;if(ev.kind==='programa'&&!$('#evid').value){rolled.prog=null}
+    const ev={id,title,date,time:$('#evtm').value||'',pillar:$('#evp').value,recur:$('#evr').value,kind:$('#evk').checked?'programa':($('#evkind').value==='sexta'?'sexta':''),notes:$('#evn').value.trim(),cat:$('#evc').value,deadline:$('#evdl').checked};if($('#evpend').value==='1')ev.pend=true;if(ev.kind==='sexta')rolled.fri=null;if(ev.kind==='programa')rolled.sat=null;if(ev.kind==='programa'&&!$('#evid').value){rolled.prog=null}
     const i=agenda.findIndex(a=>a.id===id);if(i>=0){if(agenda[i].st)ev.st=agenda[i].st;if(agenda[i].from)ev.from=agenda[i].from;agenda[i]=ev}else agenda.push(ev);saveEv(ev);
     $('#sheet').hidden=true;calSel=date;calCur=parse(date);toast('Salvo na agenda');render()}
 });

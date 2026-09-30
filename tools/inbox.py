@@ -72,6 +72,8 @@ def main():
     a.add_argument('--recur', default='none', choices=sorted(RECUR))
     a.add_argument('--notes', default='')
     a.add_argument('--programa', action='store_true')
+    a.add_argument('--cat', default='', choices=['', 'faculdade', 'estudo', 'trabalho', 'pessoal'])
+    a.add_argument('--prazo', action='store_true', help='marca como prazo (contagem regressiva)')
     a.add_argument('--id')
     d = sub.add_parser('del')
     d.add_argument('--id', required=True)
@@ -91,7 +93,8 @@ def main():
         datetime.strptime(x.time, '%H:%M')
     eid = x.id or ('c-' + slug(x.title) + '-' + x.date)
     ev = {'id': eid, 'title': x.title, 'date': x.date, 'time': x.time, 'pillar': x.pillar,
-          'recur': x.recur, 'kind': 'programa' if x.programa else '', 'notes': x.notes}
+          'recur': x.recur, 'kind': 'programa' if x.programa else '', 'notes': x.notes,
+          'cat': x.cat, 'deadline': x.prazo}
     mid = push({'op': 'add', 'ev': ev})
     print('adicionado', eid, 'msg', mid)
 
