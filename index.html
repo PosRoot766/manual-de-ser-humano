@@ -482,7 +482,7 @@ function quartoCard(){
     else h+='<div class="hrow"><span class="nt">'+esc(o.area)+'</span><span class="tag ok">organizado</span></div>';
     h+='</div>'}
   return h+'</div>'}
-function nextDeadlines(){const out=[];for(let i=0;i<=400&&out.length<3;i++){const k=key(addD(parse(TODAY),i));for(const e of evOn(k))if(e.id&&e.deadline&&!evSt(e,k))out.push({k,e,n:i})}return out}
+function nextDeadlines(){const out=[];for(let i=0;i<=800&&out.length<3;i++){const k=key(addD(parse(TODAY),i));for(const e of evOn(k))if(e.id&&e.deadline&&!evSt(e,k))out.push({k,e,n:i})}return out}
 function prazoCard(){const L=nextDeadlines();if(!L.length)return '';const a=L[0];
   let h='<div class="card"><div class="label">Próximo prazo</div><div class="hrow"><div><div class="nt" style="font-size:17px">'+esc(a.e.title)+'</div><div class="sub2">'+fmt(a.k)+(a.e.cat?' · '+CATS[a.e.cat]:'')+'</div></div><div style="text-align:right"><b class="num" style="font-family:var(--display);font-size:34px;line-height:1;color:'+(a.n<=3?'var(--bad)':a.n<=10?'var(--warn)':'var(--ink)')+'">'+(a.n===0?'hoje':a.n)+'</b><div class="sub2">'+(a.n===0?'':a.n===1?'dia':'dias')+'</div></div></div>';
   if(L.length>1)h+=L.slice(1).map(o=>'<div class="hrow sub2"><span>'+esc(o.e.title)+'</span><span class="num">'+o.n+' d</span></div>').join('');
